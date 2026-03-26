@@ -11,11 +11,11 @@ Register a doctor account
 ### POST /api/auth/login
 Login user and return JWT token
 
-### POST /api/auth/verify-email
-Verify user email using token
+### POST /api/auth/verify-email-otp
+Verify user email using 6-digit OTP
 
-### POST /api/auth/resend-verification-email
-Resend verification email
+### POST /api/auth/resend-email-otp
+Resend email verification OTP
 
 ### POST /api/auth/forgot-password
 Send password reset email
