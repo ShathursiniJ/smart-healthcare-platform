@@ -11,10 +11,9 @@
 - chore: setup/config
 - docs: documentation
 - refactor: code cleanup
-- test: tests
+- test: testing work
 
 ## Coding Standards
-- Use clear folder structure
 - Keep routes, controllers, services, and models separate
 - Use centralized error handling
 - Validate request data
