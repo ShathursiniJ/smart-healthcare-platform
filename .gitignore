@@ -34,15 +34,16 @@ temp/
 # frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.vite/
 
 # services
 services/**/node_modules/
 services/**/dist/
 services/**/build/
 
-# test / reports
+# reports
 reports/
 *.lcov
 
-# docker
+# docker / runtime
 *.pid
