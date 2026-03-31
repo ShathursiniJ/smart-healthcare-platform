@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const DOCTOR_API = "http://localhost:5003/api";
+const AUTH_API = "http://localhost:5001/api";
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");
@@ -53,7 +54,7 @@ export const getDoctorById = async (id) => {
   return response.data;
 };
 
-// Admin
+// Admin - doctor management
 export const getPendingDoctors = async () => {
   const response = await axios.get(`${DOCTOR_API}/admin/doctors/pending`, {
     headers: getAuthHeader(),
@@ -91,6 +92,30 @@ export const deactivateDoctor = async (id) => {
     `${DOCTOR_API}/admin/doctors/${id}/deactivate`,
     {},
     { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
+// Admin - user management
+export const getAllUsers = async () => {
+  const response = await axios.get(`${AUTH_API}/admin/users`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+// Profile image upload
+export const uploadProfileImage = async (formData) => {
+  const token = localStorage.getItem("token");
+  const response = await axios.post(
+    `${DOCTOR_API}/doctors/profile/upload-image`,
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    }
   );
   return response.data;
 };
