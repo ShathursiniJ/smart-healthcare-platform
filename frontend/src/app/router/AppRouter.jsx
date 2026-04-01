@@ -27,6 +27,8 @@ import AvailabilityPage from "../../pages/doctor/AvailabilityPage";
 import DoctorAppointmentsPage from "../../pages/doctor/AppointmentsPage";
 import ReportsReviewPage from "../../pages/doctor/ReportsReviewPage";
 import PrescriptionPage from "../../pages/doctor/PrescriptionPage";
+import DoctorPatientsPage from "../../pages/doctor/PatientsPage";
+import DoctorVideoPage from "../../pages/doctor/VideoSessionPage";
 
 import AdminDashboardPage from "../../pages/admin/DashboardPage";
 import VerifyDoctorsPage from "../../pages/admin/VerifyDoctorsPage";
@@ -39,14 +41,7 @@ import BookAppointmentPage from "../../pages/shared/BookAppointmentPage";
 import PaymentPage from "../../pages/shared/PaymentPage";
 import ConsultationPage from "../../pages/shared/ConsultationPage";
 
-import DoctorSchedulePage from "../../pages/doctor/SchedulePage";
-import DoctorPatientsPage from "../../pages/doctor/PatientsPage";
-import DoctorVideoPage from "../../pages/doctor/VideoSessionPage";
-
 import ProtectedRoute from "../../components/auth/ProtectedRoute";
-
-import DoctorPatientsPage from "../../pages/doctor/PatientsPage";
-import DoctorVideoPage from "../../pages/doctor/VideoSessionPage";
 
 function AppRouter() {
   return (
@@ -60,7 +55,6 @@ function AppRouter() {
           <Route path="/verify-otp" element={<VerifyOtpPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-
           <Route path="/doctors" element={<DoctorListPage />} />
           <Route path="/doctors/:id" element={<DoctorDetailsPage />} />
           <Route path="/book-appointment" element={<BookAppointmentPage />} />
@@ -84,38 +78,14 @@ function AppRouter() {
           <Route path="/doctor" element={<DoctorLayout />}>
             <Route path="dashboard" element={<DoctorDashboardPage />} />
             <Route path="profile" element={<DoctorProfilePage />} />
-            <Route path="availability" element={<AvailabilityPage />} />
+            <Route path="schedule" element={<AvailabilityPage />} />
             <Route path="appointments" element={<DoctorAppointmentsPage />} />
+            <Route path="patients" element={<DoctorPatientsPage />} />
             <Route path="reports" element={<ReportsReviewPage />} />
             <Route path="prescriptions" element={<PrescriptionPage />} />
+            <Route path="video" element={<DoctorVideoPage />} />
           </Route>
         </Route>
-
-        <Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
-  <Route path="/doctor" element={<DoctorLayout />}>
-    <Route path="dashboard" element={<DoctorDashboardPage />} />
-    <Route path="profile" element={<DoctorProfilePage />} />
-    <Route path="schedule" element={<AvailabilityPage />} />
-    <Route path="appointments" element={<DoctorAppointmentsPage />} />
-    <Route path="patients" element={<DoctorPatientsPage />} />
-    <Route path="reports" element={<ReportsReviewPage />} />
-    <Route path="prescriptions" element={<PrescriptionPage />} />
-    <Route path="video" element={<DoctorVideoPage />} />
-  </Route>
-</Route>
-
-<Route element={<ProtectedRoute allowedRoles={["doctor"]} />}>
-  <Route path="/doctor" element={<DoctorLayout />}>
-    <Route path="dashboard" element={<DoctorDashboardPage />} />
-    <Route path="profile" element={<DoctorProfilePage />} />
-    <Route path="schedule" element={<AvailabilityPage />} />
-    <Route path="appointments" element={<DoctorAppointmentsPage />} />
-    <Route path="patients" element={<DoctorPatientsPage />} />
-    <Route path="reports" element={<ReportsReviewPage />} />
-    <Route path="prescriptions" element={<PrescriptionPage />} />
-    <Route path="video" element={<DoctorVideoPage />} />
-  </Route>
-</Route>
 
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
