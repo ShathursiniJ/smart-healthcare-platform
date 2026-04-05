@@ -13,8 +13,8 @@ import VerifyOtpPage from "../../pages/public/VerifyOtpPage";
 import ForgotPasswordPage from "../../pages/public/ForgotPasswordPage";
 import ResetPasswordPage from "../../pages/public/ResetPasswordPage";
 
-import DashboardPage from "../../pages/patient/DashboardPage";
-import ProfilePage from "../../pages/patient/ProfilePage";
+import PatientDashboardPage from "../../pages/patient/DashboardPage";
+import PatientProfilePage from "../../pages/patient/ProfilePage";
 import MedicalHistoryPage from "../../pages/patient/MedicalHistoryPage";
 import ReportsPage from "../../pages/patient/ReportsPage";
 import PrescriptionsPage from "../../pages/patient/PrescriptionsPage";
@@ -25,15 +25,17 @@ import DoctorDashboardPage from "../../pages/doctor/DashboardPage";
 import DoctorProfilePage from "../../pages/doctor/ProfilePage";
 import AvailabilityPage from "../../pages/doctor/AvailabilityPage";
 import DoctorAppointmentsPage from "../../pages/doctor/AppointmentsPage";
+import DoctorPatientsPage from "../../pages/doctor/PatientsPage";
 import ReportsReviewPage from "../../pages/doctor/ReportsReviewPage";
 import PrescriptionPage from "../../pages/doctor/PrescriptionPage";
-import DoctorPatientsPage from "../../pages/doctor/PatientsPage";
 import DoctorVideoPage from "../../pages/doctor/VideoSessionPage";
 
 import AdminDashboardPage from "../../pages/admin/DashboardPage";
 import VerifyDoctorsPage from "../../pages/admin/VerifyDoctorsPage";
 import ManageUsersPage from "../../pages/admin/ManageUsersPage";
 import ManageDoctorsPage from "../../pages/admin/ManageDoctorsPage";
+import AdminAppointmentsPage from "../../pages/admin/AppointmentsPage";
+import TransactionsPage from "../../pages/admin/TransactionsPage";
 
 import DoctorListPage from "../../pages/shared/DoctorListPage";
 import DoctorDetailsPage from "../../pages/shared/DoctorDetailsPage";
@@ -64,8 +66,8 @@ function AppRouter() {
 
         <Route element={<ProtectedRoute allowedRoles={["patient"]} />}>
           <Route path="/patient" element={<PatientLayout />}>
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="profile" element={<ProfilePage />} />
+            <Route path="dashboard" element={<PatientDashboardPage />} />
+            <Route path="profile" element={<PatientProfilePage />} />
             <Route path="medical-history" element={<MedicalHistoryPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="prescriptions" element={<PrescriptionsPage />} />
@@ -90,9 +92,11 @@ function AppRouter() {
         <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="users" element={<ManageUsersPage />} />
             <Route path="verify-doctors" element={<VerifyDoctorsPage />} />
-            <Route path="manage-users" element={<ManageUsersPage />} />
             <Route path="manage-doctors" element={<ManageDoctorsPage />} />
+            <Route path="appointments" element={<AdminAppointmentsPage />} />
+            <Route path="transactions" element={<TransactionsPage />} />
           </Route>
         </Route>
       </Routes>
