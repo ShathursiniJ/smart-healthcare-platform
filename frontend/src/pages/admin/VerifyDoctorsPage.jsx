@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getPendingDoctors, getAllDoctors, approveDoctor, rejectDoctor } from "../../services/doctorApi";
+import { getAllDoctors, approveDoctor, rejectDoctor } from "../../services/doctorApi";
 
 const statusConfig = {
   pending: "bg-amber-100 text-amber-700",
@@ -29,6 +29,10 @@ function VerifyDoctorsPage() {
 
   useEffect(() => { fetchDoctors(); }, []);
 
+  const pendingDoctors = doctors.filter((d) => d.approvalStatus === "pending");
+  const approvedDoctors = doctors.filter((d) => d.approvalStatus === "approved");
+  const rejectedThisMonth = doctors.filter((d) => d.approvalStatus === "rejected").length;
+
   const handleApprove = async (id) => {
     setActionId(id);
     setErrorMessage("");
@@ -47,8 +51,6 @@ function VerifyDoctorsPage() {
 
   const handleReject = async (id) => {
     setActionId(id);
-    setErrorMessage("");
-    setSuccessMessage("");
     try {
       await rejectDoctor(id, rejectReason);
       setSuccessMessage("Doctor rejected");
@@ -63,19 +65,37 @@ function VerifyDoctorsPage() {
     }
   };
 
+  function getInitials(name) {
+    return name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "D";
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-sm text-slate-500">Loading doctors...</p>
+        <p className="text-sm text-slate-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Doctor Verification</h1>
-        <p className="text-sm text-slate-500">Review and verify doctor registrations</p>
+        <h1 className="text-2xl font-bold text-slate-800">Verify Doctor Registrations</h1>
+        <p className="text-sm text-slate-500">Review and approve new doctor applications</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Pending Verification", value: pendingDoctors.length, color: "text-slate-800" },
+          { label: "Verified Doctors", value: approvedDoctors.length, color: "text-slate-800" },
+          { label: "Rejected This Month", value: rejectedThisMonth, color: "text-red-600" },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+            <p className="mt-1 text-sm text-slate-500">{stat.label}</p>
+          </div>
+        ))}
       </div>
 
       {successMessage && (
@@ -85,74 +105,128 @@ function VerifyDoctorsPage() {
         <p className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-500">{errorMessage}</p>
       )}
 
-      <div className="space-y-3">
+      {/* Doctor Cards */}
+      <div className="space-y-4">
         {doctors.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-            <p className="text-sm text-slate-500">No doctors found.</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm text-slate-500">No doctor registrations found.</p>
           </div>
         ) : (
           doctors.map((doctor) => (
-            <div key={doctor._id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-slate-800">{doctor.name}</h2>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusConfig[doctor.approvalStatus]}`}>
-                      {doctor.approvalStatus}
-                    </span>
+            <div key={doctor._id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-start gap-4">
+                {/* Avatar */}
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 text-lg font-bold text-teal-700">
+                  {getInitials(doctor.name)}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-800">{doctor.name}</h3>
+                      <p className="text-sm font-medium text-teal-600">{doctor.specialization}</p>
+                      <p className="text-xs text-slate-400">
+                        Submitted: {new Date(doctor.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Documents
+                      </button>
+                      {doctor.approvalStatus === "pending" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(doctor._id)}
+                            disabled={actionId === doctor._id}
+                            className="flex items-center gap-1 rounded-xl bg-teal-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-70"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setRejectingId(doctor._id)}
+                            className="flex items-center gap-1 rounded-xl bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-100"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                            Reject
+                          </button>
+                          <button className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                            Request More Info
+                          </button>
+                        </>
+                      )}
+                      {doctor.approvalStatus !== "pending" && (
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize text-center ${statusConfig[doctor.approvalStatus]}`}>
+                          {doctor.approvalStatus}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {doctor.specialization} • {doctor.experience} years experience
-                  </p>
-                  <p className="text-xs text-slate-400">
-                    License: {doctor.licenseNumber} • Submitted: {new Date(doctor.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
+
+                  {/* Details Grid */}
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-slate-500">Email</p>
+                      <p className="text-sm text-slate-700">{doctor.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Phone</p>
+                      <p className="text-sm text-slate-700">{doctor.phone || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">License Number</p>
+                      <p className="text-sm text-slate-700">{doctor.licenseNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Experience</p>
+                      <p className="text-sm text-slate-700">{doctor.experience} years</p>
+                    </div>
+                  </div>
+
+                  {/* Education / Documents */}
+                  {doctor.qualifications?.length > 0 && (
+                    <div className="mt-3 rounded-xl bg-slate-50 px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                        </svg>
+                        <p className="text-xs font-medium text-slate-700">Education</p>
+                      </div>
+                      <p className="mt-0.5 text-sm text-slate-600">{doctor.qualifications.join(", ")}</p>
+                    </div>
+                  )}
+
+                  <div className="mt-2 rounded-xl bg-slate-50 px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <svg className="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p className="text-xs font-medium text-slate-700">Documents Submitted</p>
+                    </div>
+                    <p className="mt-0.5 text-sm text-slate-600">Medical License, Degree Certificate, ID Proof</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  View Docs
-                </button>
-
-                {doctor.approvalStatus === "pending" && (
-                  <>
-                    <button
-                      onClick={() => handleApprove(doctor._id)}
-                      disabled={actionId === doctor._id}
-                      className="flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-70"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => setRejectingId(doctor._id)}
-                      className="flex items-center gap-1 rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white hover:bg-red-400"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Reject
-                    </button>
-                  </>
-                )}
-              </div>
-
+              {/* Reject Reason Input */}
               {rejectingId === doctor._id && (
-                <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
                   <input
                     type="text" value={rejectReason}
                     onChange={(e) => setRejectReason(e.target.value)}
                     placeholder="Reason for rejection"
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
                   />
                   <div className="flex gap-2">
                     <button
