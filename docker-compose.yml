@@ -40,7 +40,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/api/auth/health"] || exit 1
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/api/auth/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -65,6 +65,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5002/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Consultation Service - Port 5003
   consultation-service:
@@ -87,6 +92,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5003/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Appointment Service - Port 5004
   appointment-service:
@@ -109,6 +119,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5004/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Doctor Service - Port 5005
   doctor-service:
@@ -129,6 +144,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5005/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Payment Service - Port 5006
   payment-notification-service:
@@ -157,6 +177,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5006/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Notification Service - Port 5007
   notification-service:
@@ -186,6 +211,11 @@ services:
     networks:
       - healthcare-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5007/api/notifications/admin || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # API Gateway - Port 3000
   api-gateway:
@@ -219,7 +249,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"] || exit 1
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
