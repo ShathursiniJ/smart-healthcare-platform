@@ -1,12 +1,17 @@
 import axios from "axios";
+import { getToken } from "../features/auth/authStorage";
 
 const DOCTOR_API  = "http://localhost:5005/api";
 const AUTH_API    = "http://localhost:5001/api";
 const PATIENT_API = "http://localhost:5002/api";
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
+const getAuthHeader = (extraHeaders = {}) => {
+  const token = getToken?.() || localStorage.getItem("token");
+
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extraHeaders,
+  };
 };
 
 // ── Public doctor listing ──────────────────────────────────────────────────
@@ -110,6 +115,81 @@ export const deleteMedicalHistoryEntry = async (id) => {
   return response.data;
 };
 
+// Medical History (alternate endpoints)
+export const fetchMedicalHistory = async () => {
+  const response = await axios.get(`${PATIENT_API}/patients/medical-history`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const createMedicalHistory = async (historyData) => {
+  const response = await axios.post(`${PATIENT_API}/patients/medical-history`, historyData, {
+    headers: getAuthHeader({
+      "Content-Type": "application/json",
+    }),
+  });
+  return response.data;
+};
+
+export const updateMedicalHistory = async (id, historyData) => {
+  const response = await axios.put(
+    `${PATIENT_API}/patients/medical-history/${id}`,
+    historyData,
+    {
+      headers: getAuthHeader({
+        "Content-Type": "application/json",
+      }),
+    }
+  );
+  return response.data;
+};
+
+export const deleteMedicalHistory = async (id) => {
+  const response = await axios.delete(`${PATIENT_API}/patients/medical-history/${id}`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+// Reports (alternate endpoints)
+export const fetchPatientReports = async () => {
+  const response = await axios.get(`${PATIENT_API}/patients/reports`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const uploadPatientReport = async (formData) => {
+  const response = await axios.post(`${PATIENT_API}/patients/reports`, formData, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const updatePatientReport = async (id, reportData) => {
+  const response = await axios.put(`${PATIENT_API}/patients/reports/${id}`, reportData, {
+    headers: getAuthHeader({
+      "Content-Type": "application/json",
+    }),
+  });
+  return response.data;
+};
+
+export const replacePatientReportFile = async (id, formData) => {
+  const response = await axios.put(`${PATIENT_API}/patients/reports/${id}/file`, formData, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
+export const deletePatientReport = async (id) => {
+  const response = await axios.delete(`${PATIENT_API}/patients/reports/${id}`, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};
+
 // ── Doctor access to patient data ─────────────────────────────────────────
 // Used by doctors to view reports of their patients
 
@@ -126,5 +206,17 @@ export const getDoctorViewPatientProfile = async (patientAuthUserId) => {
     `${PATIENT_API}/doctor-access/patient-profile/${patientAuthUserId}`,
     { headers: getAuthHeader() }
   );
+  return response.data;
+};
+
+// ── Aliases for profile functions ──────────────────────────────────────────
+export const fetchPatientProfile = async () => {
+  return getPatientProfile();
+};
+
+export const uploadPatientAvatar = async (formData) => {
+  const response = await axios.put(`${PATIENT_API}/patients/profile/avatar`, formData, {
+    headers: getAuthHeader(),
+  });
   return response.data;
 };
