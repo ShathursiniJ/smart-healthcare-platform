@@ -4,8 +4,8 @@ import {
   getPatientPayments, getAllPayments, getPaymentStats,
 } from '../controllers/paymentController.js';
 import {
-  sendNotification, notifyAppointmentConfirmed,
-  getMyNotifications, markAsRead, markAllAsRead, getUnreadCount,
+  sendNotification, notifyAppointmentConfirmed, notifyAppointmentBooked,
+  getMyNotifications, markAsRead, markAllAsRead, getUnreadCount, notifyPaymentConfirmed,
 } from '../controllers/notificationController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -22,6 +22,8 @@ router.get('/payments/admin/stats',   protect, authorize('admin'), getPaymentSta
 // Notification routes
 router.post('/notifications/send',                  protect, sendNotification);
 router.post('/notifications/appointment-confirmed', protect, notifyAppointmentConfirmed);
+router.post('/notifications/appointment-booked',    protect, notifyAppointmentBooked);
+router.post('/notifications/payment-confirmed',     protect, notifyPaymentConfirmed);
 router.get('/notifications',                        protect, getMyNotifications);
 router.get('/notifications/unread-count',           protect, getUnreadCount);
 router.patch('/notifications/read-all',             protect, markAllAsRead);

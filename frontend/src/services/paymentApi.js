@@ -74,3 +74,11 @@ export const markAllNotificationsRead = async () => {
   });
   return response.data;
 };
+
+// Send payment confirmation notification
+export const sendPaymentNotification = async (data) => {
+  const response = await axios.post(`${PAY_API}/notifications/payment-confirmed`, data, {
+    headers: getAuthHeader(),
+  });
+  return response.data;
+};

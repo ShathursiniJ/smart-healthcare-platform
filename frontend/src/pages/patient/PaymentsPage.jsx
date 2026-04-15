@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { getPatientPayments, initiatePayment, confirmPayment } from '../../services/paymentApi';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getPatientPayments, initiatePayment } from '../../services/paymentApi';
 import { useAuth } from '../../features/auth/AuthContext';
 
 const statusConfig = {
@@ -13,17 +13,20 @@ const statusConfig = {
 function PaymentsPage() {
   const { user }  = useAuth();
   const location  = useLocation();
+  const navigate  = useNavigate();
   const [payments, setPayments]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [payModal, setPayModal]     = useState(null);
   const [paying, setPaying]         = useState(false);
   const [successMsg, setSuccess]    = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('payhere');
 
   useEffect(() => { fetchPayments(); }, []);
 
   // Pre-open payment modal if navigated from appointments with unpaid appt
   useEffect(() => {
     if (location.state?.appointment) {
+      setPaymentMethod('payhere'); // Reset to PayHere by default
       setPayModal(location.state.appointment);
     }
   }, [location.state]);
@@ -41,6 +44,11 @@ function PaymentsPage() {
   };
 
   const handlePay = async (appointment) => {
+    if (paymentMethod === 'dummy') {
+      handleDummyPayment(appointment);
+      return;
+    }
+    
     setPaying(true);
     try {
       // 1. Initiate payment record
@@ -55,21 +63,101 @@ function PaymentsPage() {
         patientEmail:  user?.email || '',
       });
 
-      const paymentId = initRes.data?.payment?._id;
+      const payhereData = initRes.data?.payhereData;
+      if (!payhereData) {
+        throw new Error('Failed to get PayHere data');
+      }
 
-      // 2. Sandbox: auto-confirm (in real usage, PayHere redirect handles this)
-      await confirmPayment({
-        paymentId,
-        transactionId: `TXN-${Date.now()}`,
+      // 2. Create and submit PayHere form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = payhereData.sandbox 
+        ? 'https://sandbox.payhere.lk/pay/checkout'
+        : 'https://www.payhere.lk/pay/checkout';
+      form.style.display = 'none';
+
+      // Add all PayHere fields to form
+      const formFields = {
+        merchant_id:   payhereData.merchant_id,
+        return_url:    payhereData.return_url,
+        cancel_url:    payhereData.cancel_url,
+        notify_url:    payhereData.notify_url,
+        order_id:      payhereData.order_id,
+        items:         payhereData.items,
+        currency:      payhereData.currency,
+        amount:        payhereData.amount,
+        first_name:    payhereData.first_name,
+        last_name:     payhereData.last_name,
+        email:         payhereData.email,
+        phone:         payhereData.phone,
+        address:       payhereData.address,
+        city:          payhereData.city,
+        country:       payhereData.country,
+      };
+
+      // Calculate MD5 hash for PayHere
+      const hashString = `${payhereData.merchant_id}${payhereData.order_id}${payhereData.amount}${payhereData.currency}${Date.now()}`;
+      
+      Object.entries(formFields).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value || '';
+        form.appendChild(input);
+      });
+
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+      
+      setPayModal(null);
+      setPaying(false);
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'Payment failed. Please try again.');
+      setPaying(false);
+    }
+  };
+
+  const handleDummyPayment = async (appointment) => {
+    setPaying(true);
+    try {
+      // 1. Initiate payment record
+      const initRes = await initiatePayment({
+        appointmentId: appointment._id,
+        doctorId:      appointment.doctorAuthId || appointment.doctorId,
+        doctorName:    appointment.doctorName,
+        amount:        appointment.consultationFee || 1500,
+        currency:      'LKR',
+        paymentMethod: 'dummy',
+        patientName:   user?.name || 'Patient',
         patientEmail:  user?.email || '',
       });
 
-      setPayModal(null);
-      setSuccess('Payment successful! Receipt sent to your email.');
-      setTimeout(() => setSuccess(''), 5000);
+      const paymentId = initRes.data?.payment?._id;
+
+      // 2. For dummy payment, directly confirm as successful
+      // Simulate PayHere webhook notification (signature validation skipped for DUMMY payments)
+      await fetch('http://localhost:5006/api/payments/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: paymentId,
+          payment_id: `DUMMY-${Date.now()}`,
+          status_code: '2', // Success code
+          amount: (appointment.consultationFee || 1500).toString(),
+          currency: 'LKR',
+        }),
+      });
+
+      // 3. Refresh payments list
+      await new Promise(resolve => setTimeout(resolve, 1000));
       fetchPayments();
+
+      setPayModal(null);
+      setSuccess('✓ Dummy payment confirmed! Notification sent to admin.');
+      setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Payment failed. Please try again.');
+      alert(err.message || 'Dummy payment failed. Please try again.');
     } finally {
       setPaying(false);
     }
@@ -171,16 +259,68 @@ function PaymentsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-700 mb-5">
-              🔒 Sandbox mode — payment will be auto-confirmed for testing
+            {/* Payment Method Selection */}
+            <div className="space-y-3 mb-5">
+              <p className="text-xs font-semibold text-slate-600 uppercase">Select Payment Method</p>
+              
+              <label className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition ${
+                paymentMethod === 'payhere' 
+                  ? 'border-teal-600 bg-teal-50' 
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}>
+                <input
+                  type="radio"
+                  value="payhere"
+                  checked={paymentMethod === 'payhere'}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-4 h-4"
+                />
+                <div>
+                  <p className="font-medium text-slate-800">PayHere Gateway</p>
+                  <p className="text-xs text-slate-500">Real payment processing</p>
+                </div>
+              </label>
+
+              <label className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition ${
+                paymentMethod === 'dummy' 
+                  ? 'border-amber-600 bg-amber-50' 
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}>
+                <input
+                  type="radio"
+                  value="dummy"
+                  checked={paymentMethod === 'dummy'}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-4 h-4"
+                />
+                <div>
+                  <p className="font-medium text-slate-800">Dummy Payment (Testing)</p>
+                  <p className="text-xs text-slate-500">Auto-confirm for testing</p>
+                </div>
+              </label>
+            </div>
+
+            <div className={`rounded-xl border px-3 py-2 text-xs mb-5 ${
+              paymentMethod === 'dummy'
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                : 'bg-blue-50 border-blue-200 text-blue-700'
+            }`}>
+              {paymentMethod === 'dummy' 
+                ? '⚡ Test mode: Payment will be instantly confirmed without redirecting to PayHere'
+                : '🔒 You will be redirected to PayHere for secure payment processing'
+              }
             </div>
 
             <div className="flex gap-3">
               <button onClick={() => handlePay(payModal)} disabled={paying}
-                className="flex-1 rounded-xl bg-teal-600 py-2.5 text-sm font-semibold text-white hover:bg-teal-500 transition disabled:opacity-60">
-                {paying ? 'Processing...' : 'Pay via PayHere'}
+                className={`flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition disabled:opacity-60 ${
+                  paymentMethod === 'dummy'
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'bg-teal-600 hover:bg-teal-700'
+                }`}>
+                {paying ? 'Processing...' : `Pay ${paymentMethod === 'dummy' ? '(Test)' : 'via PayHere'}`}
               </button>
-              <button onClick={() => setPayModal(null)}
+              <button onClick={() => { setPayModal(null); setPaymentMethod('payhere'); }}
                 className="px-4 rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50">
                 Cancel
               </button>
