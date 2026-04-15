@@ -16,13 +16,10 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
-router.use(authorize("patient"));
-
-router.post("/", createMedicalHistoryValidation, validate, createMedicalHistory);
-router.get("/", getAllMedicalHistory);
-router.get("/:id", getMedicalHistoryById);
-router.put("/:id", updateMedicalHistoryValidation, validate, updateMedicalHistoryById);
-router.delete("/:id", deleteMedicalHistoryById);
+router.post("/", protect, authorize("patient"), createMedicalHistoryValidation, validate, createMedicalHistory);
+router.get("/", protect, authorize("patient"), getAllMedicalHistory);
+router.get("/:id", protect, authorize("patient"), getMedicalHistoryById);
+router.put("/:id", protect, authorize("patient"), updateMedicalHistoryValidation, validate, updateMedicalHistoryById);
+router.delete("/:id", protect, authorize("patient"), deleteMedicalHistoryById);
 
 module.exports = router;

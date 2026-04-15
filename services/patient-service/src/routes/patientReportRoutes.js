@@ -18,21 +18,20 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
-router.use(authorize("patient"));
-
 router.post(
   "/",
+  protect,
+  authorize("patient"),
   uploadReport.single("reportFile"),
   createPatientReportValidation,
   validate,
   createPatientReport
 );
 
-router.get("/", getAllPatientReports);
-router.get("/:id", getPatientReportById);
-router.put("/:id", updatePatientReportValidation, validate, updatePatientReportById);
-router.put("/:id/file", uploadReport.single("reportFile"), replacePatientReportFile);
-router.delete("/:id", deletePatientReportById);
+router.get("/", protect, authorize("patient"), getAllPatientReports);
+router.get("/:id", protect, authorize("patient"), getPatientReportById);
+router.put("/:id", protect, authorize("patient"), updatePatientReportValidation, validate, updatePatientReportById);
+router.put("/:id/file", protect, authorize("patient"), uploadReport.single("reportFile"), replacePatientReportFile);
+router.delete("/:id", protect, authorize("patient"), deletePatientReportById);
 
 module.exports = router;

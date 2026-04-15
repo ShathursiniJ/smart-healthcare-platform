@@ -26,7 +26,9 @@ import MyAppointmentsPage from "../../pages/patient/MyAppointmentsPage";
 import SymptomCheckerPage from "../../pages/patient/SymptomCheckerPage";
 import PatientVideoPage from "../../pages/patient/VideoConsultationPage";
 import PaymentsPage from "../../pages/patient/PaymentsPage";
+import PaymentReturnPage from "../../pages/patient/PaymentReturnPage";
 import NotificationsPage from "../../pages/patient/NotificationsPage";
+import AIHealthAssistant from "../../pages/patient/AIHealthAssistant";
 
 // ── Shared pages (patient-accessible) ────────────────────────────────────────
 import DoctorListPage        from "../../pages/shared/DoctorListPage";
@@ -72,6 +74,7 @@ function AppRouter() {
           <Route path="/doctors/:id" element={<DoctorDetailsPage />} />
           <Route path="/book-appointment" element={<BookAppointmentPage />} />
           <Route path="/payment" element={<PaymentsPage />} />
+          <Route path="/payment-return" element={<PaymentReturnPage />} />
           <Route path="/consultation" element={<ConsultationPage />} />
         </Route>
 
@@ -93,6 +96,7 @@ function AppRouter() {
             <Route path="consultation/:appointmentId" element={<ConsultationPage />} />
             <Route path="payments"               element={<PaymentsPage />} />
             <Route path="notifications"          element={<NotificationsPage />} />
+            <Route path="ai-assistant"           element={<AIHealthAssistant />} />
           </Route>
         </Route>
 

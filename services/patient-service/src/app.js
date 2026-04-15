@@ -34,11 +34,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use("/api/health",                healthRoutes);
-app.use("/api/patients",              patientProfileRoutes);
+// More specific routes MUST come before the general /api/patients route
 app.use("/api/patients/medical-history", medicalHistoryRoutes);
 app.use("/api/patients/reports",      patientReportRoutes);
 app.use("/api/patients/summary",      patientSummaryRoutes);
 app.use("/api/doctor-access",         doctorAccessRoutes);  // NEW — doctor reads patient data
+app.use("/api/patients",              patientProfileRoutes);  // General route LAST
 
 app.use((req, res) => {
   res.status(404).json({

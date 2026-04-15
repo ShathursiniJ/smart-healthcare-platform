@@ -5,11 +5,18 @@ import {
 } from '../controllers/consultationController.js';
 import {
   createPrescription, getPatientPrescriptions,
-  getDoctorPrescriptions, getPrescriptionById,
+  getDoctorPrescriptions, getPrescriptionById, migratePrescriptions,
 } from '../controllers/prescriptionController.js';
+import {
+  analyzeSymptons, askHealthQuestion,
+} from '../controllers/aiAssistantController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
+
+// AI Assistant routes (no auth required - public for accessibility)
+router.post('/ai-assistant/analyze-symptoms', analyzeSymptons);
+router.post('/ai-assistant/health-question', askHealthQuestion);
 
 // Consultation routes
 router.post('/consultations/start',                     protect, authorize('doctor'), startConsultation);
@@ -23,5 +30,6 @@ router.post('/prescriptions',          protect, authorize('doctor'), createPresc
 router.get('/prescriptions/patient',   protect, authorize('patient'), getPatientPrescriptions);
 router.get('/prescriptions/doctor',    protect, authorize('doctor'), getDoctorPrescriptions);
 router.get('/prescriptions/:id',       protect, getPrescriptionById);
+router.post('/prescriptions/migrate',  migratePrescriptions);
 
 export default router;

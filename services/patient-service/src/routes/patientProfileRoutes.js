@@ -16,13 +16,10 @@ const {
 
 const router = express.Router();
 
-router.use(protect);
-router.use(authorize("patient"));
+router.put("/profile/avatar", protect, authorize("patient"), uploadAvatar.single("avatar"), uploadPatientProfileAvatar);
 
-router.put("/profile/avatar", uploadAvatar.single("avatar"), uploadPatientProfileAvatar);
-
-router.post("/profile", createPatientProfileValidation, validate, createPatientProfile);
-router.get("/profile", getCurrentPatientProfile);
-router.put("/profile", updatePatientProfileValidation, validate, updateCurrentPatientProfile);
+router.post("/profile", protect, authorize("patient"), createPatientProfileValidation, validate, createPatientProfile);
+router.get("/profile", protect, authorize("patient"), getCurrentPatientProfile);
+router.put("/profile", protect, authorize("patient"), updatePatientProfileValidation, validate, updateCurrentPatientProfile);
 
 module.exports = router;

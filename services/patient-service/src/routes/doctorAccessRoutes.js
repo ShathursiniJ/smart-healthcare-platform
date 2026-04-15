@@ -11,12 +11,9 @@ const PatientProfile = require('../models/PatientProfile');
 const MedicalHistory = require('../models/MedicalHistory');
 
 // All routes below require doctor authentication
-router.use(protect);
-router.use(authorize('doctor'));
-
 // GET /api/doctor-access/patient-reports/:patientAuthUserId
 // Doctor views reports uploaded by a specific patient
-router.get('/patient-reports/:patientAuthUserId', async (req, res) => {
+router.get('/patient-reports/:patientAuthUserId', protect, authorize('doctor'), async (req, res) => {
   try {
     const reports = await PatientReport.find({
       authUserId: req.params.patientAuthUserId,
@@ -34,7 +31,7 @@ router.get('/patient-reports/:patientAuthUserId', async (req, res) => {
 
 // GET /api/doctor-access/patient-profile/:patientAuthUserId
 // Doctor views profile of a specific patient
-router.get('/patient-profile/:patientAuthUserId', async (req, res) => {
+router.get('/patient-profile/:patientAuthUserId', protect, authorize('doctor'), async (req, res) => {
   try {
     const profile = await PatientProfile.findOne({
       authUserId: req.params.patientAuthUserId,

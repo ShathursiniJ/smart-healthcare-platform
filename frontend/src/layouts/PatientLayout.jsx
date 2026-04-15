@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchPatientProfile } from "../services/patientApi";
+import NotificationBell from "../components/shared/NotificationBell";
 
 const FILE_BASE_URL = "http://localhost:5002";
 
@@ -114,6 +115,20 @@ const navItems = [
           strokeLinejoin="round"
           strokeWidth={2}
           d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+        />
+      </svg>
+    ),
+  },
+  {
+    path: "/patient/ai-assistant",
+    label: "AI Health Assistant",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12a9 9 0 11-18 0 9 9 0 0118 0zm0 0A9 9 0 017.636 7.636"
         />
       </svg>
     ),
@@ -304,20 +319,7 @@ function PatientLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/patient/notifications")}
-              className="relative rounded-full p-1.5 text-slate-500 hover:bg-slate-100"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-            </button>
+            <NotificationBell />
 
             <div className="relative" ref={dropdownRef}>
               <button

@@ -113,6 +113,23 @@ export const getAllUsers = async () => {
   return response.data;
 };
 
+export const updateUserStatus = async (userId, accountStatus) => {
+  const response = await axios.patch(
+    `${AUTH_API}/admin/users/${userId}/status`,
+    { accountStatus },
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
+export const deleteUser = async (userId) => {
+  const response = await axios.delete(
+    `${AUTH_API}/admin/users/${userId}`,
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
 // Profile image upload
 export const uploadProfileImage = async (formData) => {
   const token = localStorage.getItem("token");
