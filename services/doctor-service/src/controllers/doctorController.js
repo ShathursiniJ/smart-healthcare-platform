@@ -77,6 +77,17 @@ export const setAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Availability must be an array' });
     }
 
+    const currentDoctor = await Doctor.findOne({ authUserId: req.user.userId }).select('approvalStatus isActive');
+    if (!currentDoctor) {
+      return res.status(404).json({ success: false, message: 'Profile not found' });
+    }
+    if (currentDoctor.approvalStatus !== 'approved' || currentDoctor.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin approval is required before publishing availability.',
+      });
+    }
+
     const doctor = await Doctor.findOneAndUpdate(
       { authUserId: req.user.userId },
       { availability },
@@ -106,7 +117,7 @@ export const getAllApprovedDoctors = async (req, res) => {
     if (name) filter.name = { $regex: name, $options: 'i' };
 
     const doctors = await Doctor.find(filter).select(
-      'name specialization hospital experience consultationFee bio rating availability profileImage'
+      'name specialization hospital experience consultationFee bio rating availability profileImage authUserId'
     );
 
     res.status(200).json({
@@ -120,9 +131,10 @@ export const getAllApprovedDoctors = async (req, res) => {
 };
 
 // GET /api/doctors/:id  — public
+// *** CRITICAL FIX: Removed .select('-authUserId') so patients can pass correct doctorAuthId when booking ***
 export const getDoctorById = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.params.id).select('-authUserId');
+    const doctor = await Doctor.findById(req.params.id);
     if (!doctor || doctor.approvalStatus !== 'approved') {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
@@ -136,8 +148,8 @@ export const getDoctorById = async (req, res) => {
 export const getDoctorAvailability = async (req, res) => {
   try {
     const doctor = await Doctor.findById(req.params.id)
-      .select('name specialization availability consultationFee');
-    if (!doctor) {
+      .select('name specialization availability consultationFee authUserId approvalStatus isActive');
+    if (!doctor || doctor.approvalStatus !== 'approved' || doctor.isActive === false) {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
     res.status(200).json({ success: true, message: 'Availability fetched', data: { doctor } });

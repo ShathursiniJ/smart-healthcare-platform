@@ -14,7 +14,10 @@ function ManageUsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [errorMessage, setErrorMessage] = useState("");
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -31,13 +34,27 @@ function ManageUsersPage() {
   }, []);
 
   const filtered = users.filter(
-    (u) =>
-      u.name?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase())
+    (u) => {
+      const matchesText =
+        u.name?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || (u.accountStatus || "active") === statusFilter;
+      return matchesText && matchesStatus;
+    }
   );
 
   const activeUsers = users.filter((u) => u.accountStatus === "active").length;
   const suspendedUsers = users.filter((u) => u.accountStatus === "suspended").length;
+  const thisWeek = users.filter((u) => {
+    if (!u.createdAt) return false;
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return new Date(u.createdAt) >= sevenDaysAgo;
+  }).length;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const formatDate = (dateStr) =>
     new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -62,7 +79,7 @@ function ManageUsersPage() {
         {[
           { label: "Total Users", value: users.length, color: "text-slate-800" },
           { label: "Active Users", value: activeUsers, color: "text-slate-800" },
-          { label: "New This Week", value: 42, color: "text-slate-800" },
+          { label: "New This Week", value: thisWeek, color: "text-slate-800" },
           { label: "Suspended", value: suspendedUsers, color: "text-red-600" },
         ].map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -94,7 +111,18 @@ function ManageUsersPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
-          All Status
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="bg-transparent outline-none"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
         </button>
       </div>
 
@@ -111,7 +139,7 @@ function ManageUsersPage() {
 
         {/* Rows */}
         <div className="divide-y divide-slate-100">
-          {filtered.map((user, index) => (
+          {paginated.map((user, index) => (
             <div key={user._id} className="grid grid-cols-6 gap-2 items-center px-5 py-4 hover:bg-slate-50">
               <div className="col-span-2 flex items-center gap-3">
                 <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${avatarColors[index % avatarColors.length]}`}>
@@ -119,7 +147,7 @@ function ManageUsersPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-800">{user.name}</p>
-                  <p className="text-xs text-slate-500">ID: #{index + 1}</p>
+                  <p className="text-xs text-slate-500">ID: #{(currentPage - 1) * PAGE_SIZE + index + 1}</p>
                 </div>
               </div>
               <div>
@@ -159,14 +187,24 @@ function ManageUsersPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
           <p className="text-sm text-slate-500">
-            Showing 1 to {filtered.length} of {users.length} users
+            Showing {filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1} to {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} filtered users
           </p>
           <div className="flex items-center gap-1">
-            <button className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Previous</button>
-            <button className="rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white">1</button>
-            <button className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">2</button>
-            <button className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">3</button>
-            <button className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">Next</button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <span className="rounded-lg bg-teal-600 px-3 py-1.5 text-sm font-medium text-white">{currentPage}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>

@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=${AUTH_MONGODB_URI}
+      - MONGODB_URI=${AUTH_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - MAIL_HOST=${EMAIL_HOST}
+      - MAIL_PORT=${EMAIL_PORT}
+      - MAIL_USER=${EMAIL_USER}
+      - MAIL_PASS=${EMAIL_PASS}
+      - MAIL_FROM=${EMAIL_FROM}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  doctor-service:
+    build: ./services/doctor-service
+    container_name: doctor-service
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+      - MONGO_URI=${DOCTOR_MONGODB_URI}
+      - MONGODB_URI=${DOCTOR_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  patient-service:
+    build: ./services/patient-service
+    container_name: patient-service
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=${PATIENT_MONGODB_URI}
+      - MONGODB_URI=${PATIENT_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  appointment-service:
+    build: ./services/appointment-service
+    container_name: appointment-service
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGODB_URI=${APPOINTMENT_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - DOCTOR_SERVICE_URL=http://doctor-service:5003
+      - NODE_ENV=production
+    depends_on:
+      - doctor-service
+    restart: unless-stopped
+
+  consultation-service:
+    build: ./services/consultation-service
+    container_name: consultation-service
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - MONGODB_URI=${CONSULTATION_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:5004
+      - NODE_ENV=production
+    depends_on:
+      - appointment-service
+    restart: unless-stopped
+
+  payment-notification-service:
+    build: ./services/payment-notification-service
+    container_name: payment-notification-service
+    ports:
+      - "5006:5006"
+    environment:
+      - PORT=5006
+      - MONGODB_URI=${PAYMENT_MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:5004
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - PAYHERE_MERCHANT_ID=${PAYHERE_MERCHANT_ID}
+      - PAYHERE_MERCHANT_SECRET=${PAYHERE_MERCHANT_SECRET}
+      - NODE_ENV=production
+    depends_on:
+      - appointment-service
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - auth-service
+      - doctor-service
+      - patient-service
+      - appointment-service
+      - consultation-service
+      - payment-notification-service
+    restart: unless-stopped

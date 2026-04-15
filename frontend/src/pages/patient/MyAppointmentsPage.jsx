@@ -1,48 +1,57 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getPatientAppointments, cancelAppointment } from '../../services/appointmentApi';
 
-const ALL_APPOINTMENTS = [
-  { id: "1", doctor: "Dr. Sarah Fernando", specialty: "Cardiology", date: "Apr 2, 2026", time: "10:00 AM", status: "confirmed", type: "video" },
-  { id: "2", doctor: "Dr. Amal Perera", specialty: "Dermatology", date: "Apr 5, 2026", time: "2:30 PM", status: "pending", type: "in-person" },
-  { id: "3", doctor: "Dr. Kasun Wijesinghe", specialty: "Orthopedics", date: "Mar 20, 2026", time: "11:00 AM", status: "completed", type: "video" },
-  { id: "4", doctor: "Dr. Priya Ratnayake", specialty: "Pediatrics", date: "Mar 15, 2026", time: "3:00 PM", status: "completed", type: "in-person" },
-  { id: "5", doctor: "Dr. Ruwan De Silva", specialty: "General Medicine", date: "Mar 10, 2026", time: "9:00 AM", status: "cancelled", type: "video" },
-];
-
-const FILTERS = ["All", "Confirmed", "Pending", "Completed", "Cancelled"];
+const FILTERS = ['All', 'Pending', 'Confirmed', 'Completed', 'Cancelled'];
 
 const statusConfig = {
-  confirmed: "bg-emerald-100 text-emerald-700",
-  pending: "bg-amber-100 text-amber-700",
-  completed: "bg-blue-100 text-blue-700",
-  cancelled: "bg-red-100 text-red-700",
-};
-
-const typeIcon = {
-  video: (
-    <svg className="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-  ),
-  "in-person": (
-    <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </svg>
-  ),
+  confirmed: 'bg-emerald-100 text-emerald-700',
+  pending:   'bg-amber-100 text-amber-700',
+  completed: 'bg-blue-100 text-blue-700',
+  cancelled: 'bg-red-100 text-red-700',
 };
 
 function MyAppointmentsPage() {
-  const [appointments, setAppointments] = useState(ALL_APPOINTMENTS);
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [activeFilter, setFilter]       = useState('All');
+  const [cancelling, setCancelling]     = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => { fetchAppointments(); }, []);
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const res = await getPatientAppointments();
+      setAppointments(res.data?.appointments || []);
+    } catch {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Cancel this appointment?')) return;
+    setCancelling(id);
+    try {
+      await cancelAppointment(id, 'Cancelled by patient');
+      fetchAppointments();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to cancel.');
+    } finally {
+      setCancelling(null);
+    }
+  };
+
   const filtered = appointments.filter(a =>
-    activeFilter === "All" ? true : a.status === activeFilter.toLowerCase()
+    activeFilter === 'All' ? true : a.status === activeFilter.toLowerCase()
   );
 
-  const handleCancel = (id) => {
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: "cancelled" } : a));
-  };
+  const formatDate = (d) => new Date(d).toLocaleDateString('en-LK', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
 
   return (
     <div className="space-y-6">
@@ -54,79 +63,100 @@ function MyAppointmentsPage() {
       {/* Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {FILTERS.map(f => (
-          <button key={f} onClick={() => setActiveFilter(f)}
+          <button key={f} onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-              activeFilter === f ? "bg-teal-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              activeFilter === f ? 'bg-teal-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}>
             {f}
           </button>
         ))}
       </div>
 
-      {/* Appointment List */}
-      <div className="space-y-3">
-        {filtered.map(appt => (
-          <div key={appt.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50">
-                  {typeIcon[appt.type]}
-                </div>
-                <div>
-                  <h3 className="font-semibold text-slate-800">{appt.doctor}</h3>
-                  <p className="text-sm text-slate-500">{appt.specialty}</p>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      {appt.date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      {appt.time}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${statusConfig[appt.status]}`}>
-                  {appt.status}
-                </span>
-                {appt.status === "confirmed" && (
-                  <>
-                    <button onClick={() => handleCancel(appt.id)}
-                      className="flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                      Cancel
-                    </button>
-                    <button onClick={() => navigate("/patient/consultation")}
-                      className="flex items-center gap-1 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => (
+            <div key={i} className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 h-24" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-teal-50">
+            <svg className="h-7 w-7 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p className="font-medium text-slate-700">No {activeFilter.toLowerCase()} appointments</p>
+          <button onClick={() => navigate('/patient/find-doctors')}
+            className="mt-4 rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-500 transition">
+            Find Doctors
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(appt => (
+            <div key={appt._id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50">
+                    {appt.type === 'video' ? (
+                      <svg className="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                      Join
+                    ) : (
+                      <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-800">{appt.doctorName}</h3>
+                    <p className="text-sm text-slate-500">{appt.specialization}</p>
+                    <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
+                      <span>📅 {formatDate(appt.appointmentDate)}</span>
+                      <span>🕐 {appt.timeSlot}</span>
+                      <span className="capitalize">📱 {appt.type}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${statusConfig[appt.status] || 'bg-slate-100 text-slate-600'}`}>
+                    {appt.status}
+                  </span>
+                  {appt.status === 'confirmed' && (
+                    <>
+                      <button onClick={() => handleCancel(appt._id)} disabled={cancelling === appt._id}
+                        className="text-sm font-medium text-red-500 hover:text-red-600 disabled:opacity-50">
+                        Cancel
+                      </button>
+                      {appt.type === 'video' && (
+                        <button onClick={() => navigate('/patient/consultation', { state: { appointment: appt } })}
+                          className="flex items-center gap-1 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Join
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {appt.status === 'pending' && (
+                    <button onClick={() => handleCancel(appt._id)} disabled={cancelling === appt._id}
+                      className="text-sm font-medium text-red-500 hover:text-red-600 disabled:opacity-50">
+                      Cancel
                     </button>
-                  </>
-                )}
-                {appt.status === "pending" && (
-                  <button onClick={() => handleCancel(appt.id)}
-                    className="flex items-center gap-1 text-sm font-medium text-red-500">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Cancel
-                  </button>
-                )}
+                  )}
+                  {appt.status === 'completed' && appt.paymentStatus === 'unpaid' && (
+                    <button onClick={() => navigate('/patient/payments', { state: { appointment: appt } })}
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
+                      Pay Now
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

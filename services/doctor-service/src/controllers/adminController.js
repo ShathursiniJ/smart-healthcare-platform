@@ -58,3 +58,17 @@ export const deactivateDoctor = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const activateDoctor = async (req, res) => {
+  try {
+    const doctor = await Doctor.findByIdAndUpdate(
+      req.params.id,
+      { isActive: true, approvalStatus: 'approved' },
+      { new: true }
+    );
+    if (!doctor) return res.status(404).json({ success: false, message: 'Doctor not found' });
+    res.status(200).json({ success: true, message: 'Doctor activated', data: { doctor } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

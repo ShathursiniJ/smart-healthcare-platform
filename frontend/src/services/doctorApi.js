@@ -96,6 +96,15 @@ export const deactivateDoctor = async (id) => {
   return response.data;
 };
 
+export const activateDoctor = async (id) => {
+  const response = await axios.patch(
+    `${DOCTOR_API}/admin/doctors/${id}/activate`,
+    {},
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
 // Admin - user management
 export const getAllUsers = async () => {
   const response = await axios.get(`${AUTH_API}/admin/users`, {

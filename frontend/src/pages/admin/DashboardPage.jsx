@@ -1,24 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAllUsers, getAllDoctors, getPendingDoctors } from "../../services/doctorApi";
-
-const RECENT_ACTIVITY = [
-  { id: "1", type: "doctor", title: "Doctor Registration", desc: "Dr. James Wilson", time: "2 hours ago" },
-  { id: "2", type: "user", title: "New User", desc: "Alice Johnson", time: "3 hours ago" },
-  { id: "3", type: "transaction", title: "Transaction", desc: "Payment from John Doe", time: "5 hours ago" },
-];
-
-const PLATFORM_STATS = [
-  { label: "Total Consultations", value: 3456, max: 4000 },
-  { label: "Appointments Today", value: 124, max: 200 },
-  { label: "Active Users", value: 1845, max: 2543 },
-  { label: "Platform Rating", value: "4.8/5.0", isText: true },
-];
+import { getAppointmentStats } from "../../services/appointmentApi";
+import { getPaymentStats } from "../../services/paymentApi";
 
 function AdminDashboardPage() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalDoctors, setTotalDoctors] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [appointmentStats, setAppointmentStats] = useState(null);
+  const [paymentStats, setPaymentStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -30,9 +21,22 @@ function AdminDashboardPage() {
           getAllDoctors(),
           getPendingDoctors(),
         ]);
+
+        const [apptStatsRes, paymentStatsRes] = await Promise.allSettled([
+          getAppointmentStats(),
+          getPaymentStats(),
+        ]);
+
         setTotalUsers(usersRes.data.count || 0);
         setTotalDoctors(doctorsRes.data.count || 0);
         setPendingCount(pendingRes.data.count || 0);
+
+        if (apptStatsRes.status === "fulfilled") {
+          setAppointmentStats(apptStatsRes.value.data?.stats || null);
+        }
+        if (paymentStatsRes.status === "fulfilled") {
+          setPaymentStats(paymentStatsRes.value.data?.stats || null);
+        }
       } catch {
         setTotalUsers(0);
       } finally {
@@ -58,9 +62,57 @@ function AdminDashboardPage() {
       icon: <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
     },
     {
-      label: "Monthly Revenue", value: "$45,280",
+      label: "Revenue", value: paymentStats ? `LKR ${(paymentStats.revenue || 0).toLocaleString()}` : "—",
       badge: "+15%", badgeColor: "text-emerald-600",
       icon: <svg className="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+    },
+  ];
+
+  const consultationsCount = (appointmentStats?.completed || 0) + (appointmentStats?.confirmed || 0);
+  const activeUsersCount = totalUsers + totalDoctors;
+  const totalPayments = (paymentStats?.completed || 0) + (paymentStats?.pending || 0) + (paymentStats?.failed || 0);
+
+  const PLATFORM_STATS = [
+    {
+      label: "Total Consultations",
+      value: consultationsCount,
+      max: Math.max(consultationsCount || 1, 100),
+    },
+    {
+      label: "Pending Appointments",
+      value: appointmentStats?.pending || 0,
+      max: Math.max(appointmentStats?.total || 1, 50),
+    },
+    {
+      label: "Active Users",
+      value: activeUsersCount,
+      max: Math.max(activeUsersCount || 1, 100),
+    },
+    {
+      label: "Payments Processed",
+      value: totalPayments,
+      max: Math.max(totalPayments || 1, 50),
+    },
+  ];
+
+  const RECENT_ACTIVITY = [
+    {
+      id: "a1",
+      title: "Pending Doctor Verifications",
+      desc: `${pendingCount} registrations waiting for review`,
+      time: "Live",
+    },
+    {
+      id: "a2",
+      title: "Appointment Pipeline",
+      desc: `${appointmentStats?.pending || 0} pending / ${appointmentStats?.confirmed || 0} confirmed`,
+      time: "Live",
+    },
+    {
+      id: "a3",
+      title: "Payments",
+      desc: `${paymentStats?.completed || 0} completed, ${(paymentStats?.revenue || 0).toLocaleString()} LKR revenue`,
+      time: "Live",
     },
   ];
 

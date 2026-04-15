@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllDoctors, approveDoctor, rejectDoctor } from "../../services/doctorApi";
+import { getAllDoctors, approveDoctor, rejectDoctor, activateDoctor, deactivateDoctor } from "../../services/doctorApi";
 
 const statusConfig = {
   pending: "bg-amber-100 text-amber-700",
@@ -15,6 +15,7 @@ function VerifyDoctorsPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
 
   const fetchDoctors = async () => {
     try {
@@ -65,6 +66,62 @@ function VerifyDoctorsPage() {
     }
   };
 
+  const handleActivate = async (id) => {
+    if (!window.confirm("Activate this doctor account?")) return;
+    setActionId(id);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await activateDoctor(id);
+      setSuccessMessage("Doctor activated successfully");
+      fetchDoctors();
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      setErrorMessage(error?.response?.data?.message || "Failed to activate");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleDeactivate = async (id) => {
+    if (!window.confirm("Deactivate this doctor account? Patients will not be able to book appointments.")) return;
+    setActionId(id);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await deactivateDoctor(id);
+      setSuccessMessage("Doctor deactivated successfully");
+      fetchDoctors();
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      setErrorMessage(error?.response?.data?.message || "Failed to deactivate");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleViewDocuments = (doctor) => {
+    if (doctor.profileImage) {
+      window.open(doctor.profileImage, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setInfoMessage("No uploaded verification documents found for this doctor.");
+    setTimeout(() => setInfoMessage(""), 3000);
+  };
+
+  const handleRequestMoreInfo = (doctor) => {
+    const subject = encodeURIComponent("Additional details required for doctor verification");
+    const body = encodeURIComponent(
+      `Dear ${doctor.name},\n\n` +
+        "Your registration is under review. Please provide additional documents or clarifications for verification.\n\n" +
+        "Regards,\nMediConnect Admin"
+    );
+    window.location.href = `mailto:${doctor.email}?subject=${subject}&body=${body}`;
+    setInfoMessage("Opened your email client to request additional information.");
+    setTimeout(() => setInfoMessage(""), 3000);
+  };
+
   function getInitials(name) {
     return name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) || "D";
   }
@@ -104,6 +161,9 @@ function VerifyDoctorsPage() {
       {errorMessage && (
         <p className="rounded-xl bg-red-50 px-4 py-2 text-sm text-red-500">{errorMessage}</p>
       )}
+      {infoMessage && (
+        <p className="rounded-xl bg-blue-50 px-4 py-2 text-sm text-blue-600">{infoMessage}</p>
+      )}
 
       {/* Doctor Cards */}
       <div className="space-y-4">
@@ -131,7 +191,10 @@ function VerifyDoctorsPage() {
                       </p>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <button className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                      <button
+                        onClick={() => handleViewDocuments(doctor)}
+                        className="flex items-center gap-1 rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -159,15 +222,38 @@ function VerifyDoctorsPage() {
                             </svg>
                             Reject
                           </button>
-                          <button className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                          <button
+                            onClick={() => handleRequestMoreInfo(doctor)}
+                            className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                          >
                             Request More Info
                           </button>
                         </>
                       )}
                       {doctor.approvalStatus !== "pending" && (
-                        <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize text-center ${statusConfig[doctor.approvalStatus]}`}>
-                          {doctor.approvalStatus}
-                        </span>
+                        <>
+                          <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize text-center ${statusConfig[doctor.approvalStatus]}`}>
+                            {doctor.approvalStatus}
+                          </span>
+                          {doctor.approvalStatus === "approved" && doctor.isActive && (
+                            <button
+                              onClick={() => handleDeactivate(doctor._id)}
+                              disabled={actionId === doctor._id}
+                              className="rounded-xl border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-70"
+                            >
+                              Deactivate
+                            </button>
+                          )}
+                          {doctor.approvalStatus === "approved" && !doctor.isActive && (
+                            <button
+                              onClick={() => handleActivate(doctor._id)}
+                              disabled={actionId === doctor._id}
+                              className="rounded-xl border border-emerald-200 px-3 py-1.5 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-70"
+                            >
+                              Activate
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
