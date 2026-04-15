@@ -1,5 +1,12 @@
 import axios from 'axios';
 import Appointment from '../models/Appointment.js';
+import { 
+  buildAppointmentConfirmedNotification, 
+  buildAppointmentCancelledNotifications, 
+  buildAppointmentCompletedNotification,
+  buildAppointmentBookedNotification,
+  sendNotificationViaService 
+} from '../../../../shared/utils/notificationHelper.js';
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -100,7 +107,7 @@ const validateDoctorAndAvailability = async ({ doctorId, appointmentDate, timeSl
     }
 
     console.log('[Validation] ✓ Doctor and availability validated');
-    return { ok: true };
+    return { ok: true, doctor };
   } catch (error) {
     console.error('[Validation Error]', error.message);
     console.error('[Validation Error Stack]', error.stack);
@@ -126,7 +133,7 @@ export const bookAppointment = async (req, res) => {
     const {
       doctorId, doctorAuthId, doctorName, specialization, hospital,
       appointmentDate, timeSlot, reason, type, consultationFee,
-      patientName, patientEmail,
+      patientName, patientEmail, patientPhone,
     } = req.body;
 
     if (!doctorId || !appointmentDate || !timeSlot || !reason) {
@@ -165,6 +172,7 @@ export const bookAppointment = async (req, res) => {
       patientId:    req.user.userId,
       patientName:  patientName || req.user.name || 'Patient',
       patientEmail: patientEmail || req.user.email || '',
+      patientPhone: patientPhone || (req.user && req.user.phone) || '',
       doctorId, doctorAuthId, doctorName, specialization,
       hospital: hospital || '',
       appointmentDate: requestedDate,
@@ -172,6 +180,10 @@ export const bookAppointment = async (req, res) => {
       consultationFee: consultationFee || 0,
       status: 'pending',
     });
+
+    // Send notification to doctor about booking (async, non-blocking)
+    const notificationData = buildAppointmentBookedNotification(appt, doctorValidation.doctor);
+    sendNotificationViaService(axios, '/notifications/appointment-booked', notificationData, req.user.token);
 
     res.status(201).json({
       success: true,
@@ -257,6 +269,10 @@ export const confirmAppointment = async (req, res) => {
     appt.status = 'confirmed';
     await appt.save();
 
+    // Send notifications (async, non-blocking)
+    const notificationData = buildAppointmentConfirmedNotification(appt);
+    sendNotificationViaService(axios, '/notifications/appointment-confirmed', notificationData, req.user.token);
+
     res.status(200).json({ success: true, message: 'Appointment confirmed.', data: { appointment: appt } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -283,6 +299,12 @@ export const cancelAppointment = async (req, res) => {
     appt.cancellationReason = req.body.reason || '';
     await appt.save();
 
+    // Send notifications (async, non-blocking)
+    const notificationDataList = buildAppointmentCancelledNotifications(appt);
+    notificationDataList.forEach(notifData => {
+      sendNotificationViaService(axios, '/notifications/send', notifData, req.user.token);
+    });
+
     res.status(200).json({ success: true, message: 'Appointment cancelled.', data: { appointment: appt } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -303,6 +325,10 @@ export const completeAppointment = async (req, res) => {
     if (req.body.notes) appt.doctorNotes = req.body.notes;
     await appt.save();
 
+    // Send notifications (async, non-blocking)
+    const notificationData = buildAppointmentCompletedNotification(appt);
+    sendNotificationViaService(axios, '/notifications/send', notificationData, req.user.token);
+
     res.status(200).json({ success: true, message: 'Appointment completed.', data: { appointment: appt } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -319,6 +345,39 @@ export const setRoomName = async (req, res) => {
     );
     if (!appt) return res.status(404).json({ success: false, message: 'Appointment not found.' });
     res.status(200).json({ success: true, data: { appointment: appt } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// PATCH /api/appointments/:id/payment-status — update appointment payment status
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentId, paymentStatus } = req.body;
+    
+    if (!paymentStatus || !['unpaid', 'paid', 'refunded'].includes(paymentStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid payment status.' });
+    }
+
+    const appt = await Appointment.findById(req.params.id);
+    if (!appt) return res.status(404).json({ success: false, message: 'Appointment not found.' });
+
+    // Only patient who booked or admin can update payment status
+    const isPatient = appt.patientId === req.user.userId;
+    const isAdmin = req.user.role === 'admin';
+    if (!isPatient && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    appt.paymentStatus = paymentStatus;
+    if (paymentId) appt.paymentId = paymentId;
+    await appt.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Payment status updated.',
+      data: { appointment: appt } 
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

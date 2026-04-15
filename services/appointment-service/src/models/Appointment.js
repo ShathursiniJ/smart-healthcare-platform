@@ -5,6 +5,7 @@ const appointmentSchema = new mongoose.Schema({
   patientId:     { type: String, required: true, index: true },
   patientName:   { type: String, required: true },
   patientEmail:  { type: String, required: true },
+  patientPhone:  { type: String, default: '' },
 
   // Doctor info (from doctor-service)
   doctorId:       { type: String, required: true, index: true },

@@ -79,3 +79,12 @@ export const getAppointmentStats = async () => {
   });
   return response.data;
 };
+
+// Update appointment payment status
+export const updateAppointmentPaymentStatus = async (appointmentId, paymentId, paymentStatus) => {
+  const response = await axios.patch(`${APPT_API}/appointments/${appointmentId}/payment-status`, 
+    { paymentId, paymentStatus },
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};

@@ -2,7 +2,7 @@ import express from 'express';
 import {
   bookAppointment, getPatientAppointments, getDoctorAppointments,
   getAppointmentById, confirmAppointment, cancelAppointment,
-  completeAppointment, setRoomName, getAllAppointments, getStats,
+  completeAppointment, setRoomName, getAllAppointments, getStats, updatePaymentStatus,
 } from '../controllers/appointmentController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -25,5 +25,6 @@ router.patch('/:id/complete', protect, authorize('doctor'), completeAppointment)
 router.get('/:id',            protect, getAppointmentById);
 router.patch('/:id/cancel',   protect, cancelAppointment);
 router.patch('/:id/room',     protect, setRoomName);
+router.patch('/:id/payment-status', protect, updatePaymentStatus);
 
 export default router;

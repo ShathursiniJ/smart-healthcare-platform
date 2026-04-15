@@ -92,63 +92,88 @@ function MyAppointmentsPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {filtered.map(appt => (
-            <div key={appt._id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-50">
-                    {appt.type === 'video' ? (
-                      <svg className="h-5 w-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div key={appt._id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+              {/* Top row: Status badge */}
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h3 className="font-semibold text-slate-800">{appt.doctorName}</h3>
+                  <p className="text-sm text-slate-500">{appt.specialization}</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize whitespace-nowrap ${statusConfig[appt.status] || 'bg-slate-100 text-slate-600'}`}>
+                  {appt.status}
+                </span>
+              </div>
+
+              {/* Middle row: Appointment details */}
+              <div className="mb-5 grid grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-2 text-slate-600">
+                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>{formatDate(appt.appointmentDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 2m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{appt.timeSlot}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600">
+                  {appt.type === 'video' ? (
+                    <>
+                      <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
-                    ) : (
-                      <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <span>Video Consultation</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       </svg>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-800">{appt.doctorName}</h3>
-                    <p className="text-sm text-slate-500">{appt.specialization}</p>
-                    <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
-                      <span>📅 {formatDate(appt.appointmentDate)}</span>
-                      <span>🕐 {appt.timeSlot}</span>
-                      <span className="capitalize">📱 {appt.type}</span>
-                    </div>
-                  </div>
+                      <span>In-Person</span>
+                    </>
+                  )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${statusConfig[appt.status] || 'bg-slate-100 text-slate-600'}`}>
-                    {appt.status}
-                  </span>
+              </div>
+
+              {/* Bottom row: Action buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex items-center gap-2">
+                  {appt.paymentStatus === 'paid' && (
+                    <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-600">✓ Payment Completed</span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   {appt.status === 'confirmed' && (
                     <>
-                      <button onClick={() => handleCancel(appt._id)} disabled={cancelling === appt._id}
-                        className="text-sm font-medium text-red-500 hover:text-red-600 disabled:opacity-50">
-                        Cancel
-                      </button>
+                      {appt.paymentStatus === 'unpaid' && (
+                        <button onClick={() => navigate('/patient/payments', { state: { appointment: appt } })}
+                          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition">
+                          💳 Pay Now
+                        </button>
+                      )}
                       {appt.type === 'video' && (
                         <button onClick={() => navigate('/patient/consultation', { state: { appointment: appt } })}
-                          className="flex items-center gap-1 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500">
+                          className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition flex items-center gap-2">
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                           Join
                         </button>
                       )}
+                      <button onClick={() => handleCancel(appt._id)} disabled={cancelling === appt._id}
+                        className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition">
+                        Cancel
+                      </button>
                     </>
                   )}
                   {appt.status === 'pending' && (
                     <button onClick={() => handleCancel(appt._id)} disabled={cancelling === appt._id}
-                      className="text-sm font-medium text-red-500 hover:text-red-600 disabled:opacity-50">
+                      className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition">
                       Cancel
-                    </button>
-                  )}
-                  {appt.status === 'completed' && appt.paymentStatus === 'unpaid' && (
-                    <button onClick={() => navigate('/patient/payments', { state: { appointment: appt } })}
-                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
-                      Pay Now
                     </button>
                   )}
                 </div>
