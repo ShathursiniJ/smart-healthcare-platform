@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMyNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from '../../services/paymentApi';
+import { getUserNotifications } from '../../services/notificationApi';
 import { useAuth } from '../../features/auth/AuthContext';
 
 function NotificationBell() {
@@ -13,54 +13,45 @@ function NotificationBell() {
 
   // Fetch notifications on mount and poll every 30 seconds
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user && user._id) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const fetchNotifications = async () => {
+    if (!user || !user._id) return;
+    
+    setLoading(true);
     try {
-      const [notifRes, countRes] = await Promise.all([
-        getMyNotifications(),
-        getUnreadCount(),
-      ]);
-      setNotifications(notifRes.data?.notifications || []);
-      setUnreadCount(countRes.data?.count || 0);
+      const response = await getUserNotifications(user._id, 20, 0);
+      if (response.success) {
+        const notifs = response.data?.notifications || [];
+        setNotifications(notifs);
+        // Count unread notifications (those not marked as read)
+        const unread = notifs.filter(n => !n.channels?.email?.sent || n.status === 'pending').length;
+        setUnreadCount(unread > 0 ? unread : notifs.length);
+      }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
-    }
-  };
-
-  const handleMarkAsRead = async (notifId) => {
-    try {
-      await markNotificationRead(notifId);
-      setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, isRead: true } : n));
-      setUnreadCount(Math.max(0, unreadCount - 1));
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllNotificationsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      setUnreadCount(0);
-    } catch (error) {
-      console.error('Failed to mark all as read:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const getTypeIcon = (type) => {
     switch (type) {
-      case 'appointment':
+      case 'appointment_booked':
         return '📅';
-      case 'payment':
+      case 'appointment_cancelled':
+        return '❌';
+      case 'consultation_completed':
+        return '✅';
+      case 'payment_received':
         return '💳';
-      case 'consultation':
-        return '🏥';
-      case 'system':
-        return '⚙️';
+      case 'doctor_registration':
+        return '👨‍⚕️';
       default:
         return '📢';
     }
@@ -68,16 +59,35 @@ function NotificationBell() {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'appointment':
+      case 'appointment_booked':
         return 'border-blue-200 bg-blue-50';
-      case 'payment':
+      case 'appointment_cancelled':
+        return 'border-red-200 bg-red-50';
+      case 'consultation_completed':
         return 'border-emerald-200 bg-emerald-50';
-      case 'consultation':
+      case 'payment_received':
+        return 'border-amber-200 bg-amber-50';
+      case 'doctor_registration':
         return 'border-purple-200 bg-purple-50';
-      case 'system':
-        return 'border-slate-200 bg-slate-50';
       default:
         return 'border-slate-200 bg-slate-50';
+    }
+  };
+
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'appointment_booked':
+        return 'Appointment Booked';
+      case 'appointment_cancelled':
+        return 'Appointment Cancelled';
+      case 'consultation_completed':
+        return 'Consultation Completed';
+      case 'payment_received':
+        return 'Payment Received';
+      case 'doctor_registration':
+        return 'Doctor Registration';
+      default:
+        return 'Notification';
     }
   };
 
@@ -108,10 +118,10 @@ function NotificationBell() {
             <h3 className="font-semibold text-slate-800">Notifications</h3>
             {unreadCount > 0 && (
               <button
-                onClick={handleMarkAllAsRead}
+                onClick={fetchNotifications}
                 className="text-xs text-blue-600 hover:text-blue-700 font-medium transition"
               >
-                Mark all as read
+                Refresh
               </button>
             )}
           </div>
@@ -128,18 +138,17 @@ function NotificationBell() {
               notifications.map(notif => (
                 <div
                   key={notif._id}
-                  onClick={() => handleMarkAsRead(notif._id)}
-                  className={`px-5 py-4 border-l-4 border-slate-200 hover:bg-slate-50 cursor-pointer transition ${
+                  className={`px-5 py-4 border-l-4 hover:bg-slate-50 cursor-pointer transition ${
                     getTypeColor(notif.type)
-                  } ${!notif.isRead ? 'font-medium bg-slate-50' : 'text-slate-600'}`}
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">{getTypeIcon(notif.type)}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{notif.title}</p>
-                      <p className="text-xs text-slate-600 mt-1 break-words">{notif.message}</p>
-                      <p className="text-xs text-slate-400 mt-2 capitalize">
-                        {notif.type} •{' '}
+                      <p className="text-sm font-semibold text-slate-800">{notif.subject || getTypeLabel(notif.type)}</p>
+                      <p className="text-xs text-slate-600 mt-1 break-words line-clamp-2">{notif.message}</p>
+                      <p className="text-xs text-slate-400 mt-2">
+                        {getTypeLabel(notif.type)} •{' '}
                         {new Date(notif.createdAt).toLocaleDateString('en-LK', {
                           month: 'short',
                           day: 'numeric',
@@ -147,6 +156,17 @@ function NotificationBell() {
                           minute: '2-digit',
                         })}
                       </p>
+                      {notif.type === 'doctor_registration' && (
+                        <button
+                          onClick={() => {
+                            navigate('/admin/verify-doctors');
+                            setIsOpen(false);
+                          }}
+                          className="mt-2 text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+                        >
+                          Review Doctor
+                        </button>
+                      )}
                     </div>
                     {!notif.isRead && (
                       <div className="ml-2 flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-1" />
