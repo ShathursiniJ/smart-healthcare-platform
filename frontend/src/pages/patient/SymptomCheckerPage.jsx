@@ -17,24 +17,27 @@ function SymptomCheckerPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("http://localhost:5003/api/ai-assistant/analyze-symptoms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: "You are a helpful medical AI assistant for a healthcare platform called MediConnect. When patients describe symptoms, provide: 1) Possible conditions (non-diagnostic), 2) Recommended doctor specialty to consult, 3) Urgency level (low/medium/high), 4) General health tips. Always remind that this is not a medical diagnosis and they should consult a real doctor. Keep responses concise and friendly.",
-          messages: [
-            ...messages.filter(m => m.role !== "system").map(m => ({ role: m.role, content: m.content })),
-            { role: "user", content: userMessage }
-          ]
+          symptoms: userMessage,
+          conversationHistory: messages.map(m => ({ role: m.role, content: m.content }))
         })
       });
+      
+      if (!response.ok) throw new Error('AI assistant error');
+      
       const data = await response.json();
-      const reply = data.content?.[0]?.text || "I couldn't process that. Please try again.";
+      const analysisData = data.data?.analysis || data.data?.response || "I couldn't process that. Please try again.";
+      
+      const reply = typeof analysisData === 'object' 
+        ? `📋 Analysis: ${JSON.stringify(analysisData, null, 2)}`
+        : analysisData;
+        
       setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I'm having trouble connecting. Please try again later." }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { role: "assistant", content: `Sorry, I'm having trouble connecting. ${error.message}` }]);
     } finally {
       setLoading(false);
     }
