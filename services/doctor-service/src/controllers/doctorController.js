@@ -165,7 +165,7 @@ export const uploadProfileImage = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const imageUrl = `http://localhost:5003/uploads/profiles/${req.file.filename}`;
+    const imageUrl = `http://localhost:${process.env.PORT || 5005}/uploads/profiles/${req.file.filename}`;
 
     const doctor = await Doctor.findOneAndUpdate(
       { authUserId: req.user.userId },

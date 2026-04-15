@@ -1,8 +1,9 @@
 import axios from 'axios';
 import Appointment from '../models/Appointment.js';
 
-const DOCTOR_SERVICE_URL = process.env.DOCTOR_SERVICE_URL || 'http://localhost:5003';
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const getDoctorServiceUrl = () => process.env.DOCTOR_SERVICE_URL || 'http://localhost:5005';
 
 const parseTimeToMinutes = (value) => {
   if (!value || typeof value !== 'string') return null;
@@ -35,45 +36,88 @@ const parseTimeToMinutes = (value) => {
 };
 
 const validateDoctorAndAvailability = async ({ doctorId, appointmentDate, timeSlot }) => {
-  const doctorRes = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}`);
-  const doctor = doctorRes?.data?.data?.doctor;
-  if (!doctor || doctor.approvalStatus !== 'approved' || doctor.isActive === false) {
-    return { ok: false, status: 400, message: 'Selected doctor is not approved for bookings.' };
-  }
+  try {
+    const DOCTOR_SERVICE_URL = getDoctorServiceUrl();
+    console.log(`[Validation] Checking doctor ${doctorId} at ${DOCTOR_SERVICE_URL}`);
+    
+    const doctorRes = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}`);
+    console.log('[Doctor Response]', doctorRes.data);
+    
+    const doctor = doctorRes?.data?.data?.doctor;
+    if (!doctor) {
+      console.log('[Validation] Doctor not found in response');
+      return { ok: false, status: 404, message: 'Doctor not found' };
+    }
+    if (doctor.approvalStatus !== 'approved') {
+      console.log(`[Validation] Doctor not approved: ${doctor.approvalStatus}`);
+      return { ok: false, status: 400, message: 'Selected doctor is not approved for bookings.' };
+    }
+    if (doctor.isActive === false) {
+      console.log('[Validation] Doctor is inactive');
+      return { ok: false, status: 400, message: 'Selected doctor is not active.' };
+    }
 
-  const availabilityRes = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}/availability`);
-  const availabilityDoctor = availabilityRes?.data?.data?.doctor;
-  const availability = availabilityDoctor?.availability || [];
-  if (!Array.isArray(availability) || availability.length === 0) {
-    return { ok: false, status: 400, message: 'Doctor has not published availability yet.' };
-  }
+    console.log(`[Validation] Getting availability for doctor ${doctorId}`);
+    const availabilityRes = await axios.get(`${DOCTOR_SERVICE_URL}/api/doctors/${doctorId}/availability`);
+    console.log('[Availability Response]', availabilityRes.data);
+    
+    const availabilityDoctor = availabilityRes?.data?.data?.doctor;
+    const availability = availabilityDoctor?.availability || [];
+    if (!Array.isArray(availability) || availability.length === 0) {
+      console.log('[Validation] No availability found');
+      return { ok: false, status: 400, message: 'Doctor has not published availability yet.' };
+    }
 
-  const appointmentDay = dayNames[new Date(appointmentDate).getDay()];
-  const selectedMinutes = parseTimeToMinutes(timeSlot);
-  if (selectedMinutes === null) {
-    return { ok: false, status: 400, message: 'Invalid time slot format.' };
-  }
+    const appointmentDay = dayNames[new Date(appointmentDate).getDay()];
+    console.log(`[Validation] Appointment day: ${appointmentDay}`);
+    
+    const selectedMinutes = parseTimeToMinutes(timeSlot);
+    if (selectedMinutes === null) {
+      console.log(`[Validation] Invalid time slot: ${timeSlot}`);
+      return { ok: false, status: 400, message: 'Invalid time slot format.' };
+    }
 
-  const daySlot = availability.find((slot) => slot.day === appointmentDay);
-  if (!daySlot) {
-    return { ok: false, status: 400, message: `Doctor is not available on ${appointmentDay}.` };
-  }
+    const daySlot = availability.find((slot) => slot.day === appointmentDay);
+    if (!daySlot) {
+      console.log(`[Validation] Doctor not available on ${appointmentDay}. Available: ${availability.map(s => s.day).join(', ')}`);
+      return { ok: false, status: 400, message: `Doctor is not available on ${appointmentDay}.` };
+    }
 
-  const startMinutes = parseTimeToMinutes(daySlot.startTime);
-  const endMinutes = parseTimeToMinutes(daySlot.endTime);
-  if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
-    return { ok: false, status: 400, message: 'Doctor availability configuration is invalid.' };
-  }
+    const startMinutes = parseTimeToMinutes(daySlot.startTime);
+    const endMinutes = parseTimeToMinutes(daySlot.endTime);
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+      console.log('[Validation] Invalid availability times');
+      return { ok: false, status: 400, message: 'Doctor availability configuration is invalid.' };
+    }
 
-  if (selectedMinutes < startMinutes || selectedMinutes >= endMinutes) {
+    if (selectedMinutes < startMinutes || selectedMinutes >= endMinutes) {
+      console.log(`[Validation] Slot ${timeSlot} (${selectedMinutes}min) outside range ${daySlot.startTime}-${daySlot.endTime} (${startMinutes}-${endMinutes}min)`);
+      return {
+        ok: false,
+        status: 400,
+        message: `Selected slot is outside doctor availability (${daySlot.startTime} - ${daySlot.endTime}).`,
+      };
+    }
+
+    console.log('[Validation] ✓ Doctor and availability validated');
+    return { ok: true };
+  } catch (error) {
+    console.error('[Validation Error]', error.message);
+    console.error('[Validation Error Stack]', error.stack);
+    if (error.response) {
+      console.error('[Validation Error Response]', error.response.status, error.response.data);
+      return {
+        ok: false,
+        status: 400,
+        message: `Doctor service error: ${error.response.data?.message || error.message}`,
+      };
+    }
     return {
       ok: false,
-      status: 400,
-      message: `Selected slot is outside doctor availability (${daySlot.startTime} - ${daySlot.endTime}).`,
+      status: 500,
+      message: `Cannot reach doctor service at ${DOCTOR_SERVICE_URL}: ${error.message}`,
     };
   }
-
-  return { ok: true };
 };
 
 // POST /api/appointments — patient books
