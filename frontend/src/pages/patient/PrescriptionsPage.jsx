@@ -5,13 +5,23 @@ function PrescriptionsPage() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading]             = useState(true);
   const [expanded, setExpanded]           = useState(null);
+  const [error, setError]                 = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
+        console.log("Fetching prescriptions...");
         const res = await getPatientPrescriptions();
+        console.log("Prescriptions response:", res);
         setPrescriptions(res.data?.prescriptions || []);
-      } catch { setPrescriptions([]); }
+        if (!res.success) {
+          setError(res.message || "Failed to load prescriptions");
+        }
+      } catch (err) {
+        console.error("Error fetching prescriptions:", err);
+        setError(err.message || "Failed to load prescriptions");
+        setPrescriptions([]);
+      }
       finally { setLoading(false); }
     })();
   }, []);
@@ -59,6 +69,12 @@ function PrescriptionsPage() {
         <h1 className="text-2xl font-bold text-slate-800">Prescriptions</h1>
         <p className="text-sm text-slate-500">View and download your digital prescriptions</p>
       </div>
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
