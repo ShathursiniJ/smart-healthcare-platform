@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: healthcare-platform
+  labels:
+    name: healthcare-platform
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: healthcare-platform
+data:
+  NODE_ENV: "production"
+  JWT_EXPIRES_IN: "1d"
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: healthcare-platform
+type: Opaque
+stringData:
+  JWT_SECRET: "f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257"
+  MONGODB_USER: "admin"
+  MONGODB_PASSWORD: "admin123"

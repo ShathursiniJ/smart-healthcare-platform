@@ -1,0 +1,279 @@
+version: "3.9"
+
+services:
+  # MongoDB - Shared Database
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Auth Service - Port 5001
+  auth-service:
+    build: ./services/auth-service
+    container_name: auth-service
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: "5001"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/auth_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      JWT_EXPIRES_IN: 1d
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/api/auth/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Patient Service - Port 5002
+  patient-service:
+    build: ./services/patient-service
+    container_name: patient-service
+    ports:
+      - "5002:5002"
+    environment:
+      PORT: "5002"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/patient_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      AUTH_SERVICE_URL: http://auth-service:5001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5002/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Consultation Service - Port 5003
+  consultation-service:
+    build: ./services/consultation-service
+    container_name: consultation-service
+    ports:
+      - "5003:5003"
+    environment:
+      PORT: "5003"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/consultation_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      APPOINTMENT_SERVICE_URL: http://appointment-service:5004
+      DOCTOR_SERVICE_URL: http://doctor-service:5005
+      AUTH_SERVICE_URL: http://auth-service:5001
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5003/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Appointment Service - Port 5004
+  appointment-service:
+    build: ./services/appointment-service
+    container_name: appointment-service
+    ports:
+      - "5004:5004"
+    environment:
+      PORT: "5004"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/appointment_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      DOCTOR_SERVICE_URL: http://doctor-service:5005
+      PATIENT_SERVICE_URL: http://patient-service:5002
+      NOTIFICATION_SERVICE_URL: http://notification-service:5007
+      AUTH_SERVICE_URL: http://auth-service:5001
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5004/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Doctor Service - Port 5005
+  doctor-service:
+    build: ./services/doctor-service
+    container_name: doctor-service
+    ports:
+      - "5005:5005"
+    environment:
+      PORT: "5005"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/doctor_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      AUTH_SERVICE_URL: http://auth-service:5001
+      NOTIFICATION_SERVICE_URL: http://notification-service:5007
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5005/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Payment Service - Port 5006
+  payment-notification-service:
+    build: ./services/payment-notification-service
+    container_name: payment-notification-service
+    ports:
+      - "5006:5006"
+    environment:
+      PORT: "5006"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/payment_db?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      APPOINTMENT_SERVICE_URL: http://appointment-service:5004
+      DOCTOR_SERVICE_URL: http://doctor-service:5005
+      PATIENT_SERVICE_URL: http://patient-service:5002
+      AUTH_SERVICE_URL: http://auth-service:5001
+      PAYHERE_MERCHANT_ID: ${PAYHERE_MERCHANT_ID:-1214559}
+      PAYHERE_MERCHANT_SECRET: ${PAYHERE_MERCHANT_SECRET:-your-secret}
+      EMAIL_SERVICE: ${EMAIL_SERVICE:-gmail}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM_NAME: MediConnect
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5006/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Notification Service - Port 5007
+  notification-service:
+    build: ./services/notification-service
+    container_name: notification-service
+    ports:
+      - "5007:5007"
+    environment:
+      PORT: "5007"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/notification_db?authSource=admin
+      EMAIL_SERVICE: ${EMAIL_SERVICE:-gmail}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASS: ${EMAIL_PASS:-}
+      EMAIL_FROM_NAME: MediConnect
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      AUTH_SERVICE_URL: http://auth-service:5001
+      APPOINTMENT_SERVICE_URL: http://appointment-service:5004
+      CONSULTATION_SERVICE_URL: http://consultation-service:5003
+      PATIENT_SERVICE_URL: http://patient-service:5002
+      DOCTOR_SERVICE_URL: http://doctor-service:5005
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5007/api/notifications/admin || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway - Port 3000
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      NODE_ENV: development
+      JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
+      AUTH_SERVICE_URL: http://auth-service:5001
+      PATIENT_SERVICE_URL: http://patient-service:5002
+      CONSULTATION_SERVICE_URL: http://consultation-service:5003
+      APPOINTMENT_SERVICE_URL: http://appointment-service:5004
+      DOCTOR_SERVICE_URL: http://doctor-service:5005
+      PAYMENT_SERVICE_URL: http://payment-notification-service:5006
+      NOTIFICATION_SERVICE_URL: http://notification-service:5007
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      CORS_ORIGIN: "*"
+    depends_on:
+      - auth-service
+      - patient-service
+      - doctor-service
+      - appointment-service
+      - consultation-service
+      - payment-notification-service
+      - notification-service
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend - React Application - Port 5173
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_APP_API_URL: http://localhost:3000
+    depends_on:
+      - api-gateway
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  healthcare-network:
+    driver: bridge

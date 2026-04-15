@@ -47,3 +47,11 @@ reports/
 
 # docker / runtime
 *.pid
+
+# specific service env files
+smart-healthcare-platform\services\appointment-service\.env
+smart-healthcare-platform\services\auth-service\.env
+smart-healthcare-platform\services\consultation-service\.env
+smart-healthcare-platform\services\doctor-service\.env
+smart-healthcare-platform\services\patient-service\.env
+smart-healthcare-platform\services\payment-notification-service\.env

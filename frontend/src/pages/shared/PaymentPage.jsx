@@ -1,11 +1,14 @@
-import React from 'react'
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
-const PaymentPage = () => {
-  return (
-    <div>
-      PaymentPage
-    </div>
-  )
+// PaymentPage redirects to the patient payments section
+// The full payment flow is in patient/PaymentsPage.jsx
+function PaymentPage() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate("/patient/payments", { replace: true });
+  }, [navigate]);
+  return null;
 }
 
-export default PaymentPage
+export default PaymentPage;
