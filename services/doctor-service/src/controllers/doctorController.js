@@ -137,14 +137,14 @@ export const setAvailability = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Availability must be an array' });
     }
 
-    const currentDoctor = await Doctor.findOne({ authUserId: req.user.userId }).select('approvalStatus isActive');
+    const currentDoctor = await Doctor.findOne({ authUserId: req.user.userId }).select('isActive');
     if (!currentDoctor) {
       return res.status(404).json({ success: false, message: 'Profile not found' });
     }
-    if (currentDoctor.approvalStatus !== 'approved' || currentDoctor.isActive === false) {
+    if (currentDoctor.isActive === false) {
       return res.status(403).json({
         success: false,
-        message: 'Admin approval is required before publishing availability.',
+        message: 'Your doctor account is inactive. Please contact admin.',
       });
     }
 

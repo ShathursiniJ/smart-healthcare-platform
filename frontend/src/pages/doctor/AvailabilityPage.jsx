@@ -89,8 +89,8 @@ function AvailabilityPage() {
     try {
       await setAvailability({ availability: slots });
       msg("ok", "Schedule saved successfully! Patients can now book appointments.");
-    } catch {
-      msg("err", "Failed to save schedule. Please try again.");
+    } catch (err) {
+      msg("err", err?.response?.data?.message || "Failed to save schedule. Please try again.");
     } finally {
       setSaving(false);
     }
