@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import { createProxyMiddleware } from 'http-proxy-middleware';
+import { createProxyMiddleware, fixRequestBody } from 'http-proxy-middleware';
 import {
   verifyToken,
   verifyTokenOptional,
@@ -52,9 +52,6 @@ app.use(generalLimiter);
 
 // ===== PUBLIC ROUTES =====
 
-/**
- * Health check endpoint
- */
 app.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -63,9 +60,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-/**
- * API Gateway info endpoint
- */
 app.get('/api/gateway/info', (req, res) => {
   res.json({
     success: true,
@@ -75,9 +69,6 @@ app.get('/api/gateway/info', (req, res) => {
   });
 });
 
-/**
- * List all available services
- */
 app.get('/api/gateway/services', (req, res) => {
   res.json({
     success: true,
@@ -86,9 +77,6 @@ app.get('/api/gateway/services', (req, res) => {
   });
 });
 
-/**
- * List all available routes
- */
 app.get('/api/gateway/routes', (req, res) => {
   res.json({
     success: true,
@@ -104,6 +92,7 @@ app.use(
     target: getServiceUrl('auth'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Auth Service:`, err.message);
       res.status(503).json({
@@ -123,8 +112,28 @@ app.use(
     target: getServiceUrl('patient'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Patient Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Patient Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+app.use(
+  '/api/doctor-access',
+  verifyToken,
+  createProxyMiddleware({
+    target: getServiceUrl('patient'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Doctor Access Route:`, err.message);
       res.status(503).json({
         success: false,
         message: 'Patient Service unavailable',
@@ -141,8 +150,46 @@ app.use(
     target: getServiceUrl('doctor'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Doctor Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Doctor Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+// ===== ADMIN ROUTES =====
+app.use(
+  '/api/admin/users',
+  createProxyMiddleware({
+    target: getServiceUrl('auth'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Auth Admin Route:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Auth Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+app.use(
+  '/api/admin/doctors',
+  createProxyMiddleware({
+    target: getServiceUrl('doctor'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Doctor Admin Route:`, err.message);
       res.status(503).json({
         success: false,
         message: 'Doctor Service unavailable',
@@ -160,6 +207,7 @@ app.use(
     target: getServiceUrl('appointment'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Appointment Service:`, err.message);
       res.status(503).json({
@@ -179,8 +227,28 @@ app.use(
     target: getServiceUrl('consultation'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Consultation Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Consultation Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+app.use(
+  '/api/prescriptions',
+  verifyToken,
+  createProxyMiddleware({
+    target: getServiceUrl('consultation'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Prescription Route:`, err.message);
       res.status(503).json({
         success: false,
         message: 'Consultation Service unavailable',
@@ -197,6 +265,7 @@ app.use(
     target: getServiceUrl('payment'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Payment Service:`, err.message);
       res.status(503).json({
@@ -215,6 +284,7 @@ app.use(
     target: getServiceUrl('notification'),
     changeOrigin: true,
     pathRewrite: { '^/api': '/api' },
+    onProxyReq: fixRequestBody,
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Notification Service:`, err.message);
       res.status(503).json({

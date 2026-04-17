@@ -137,7 +137,7 @@ function PaymentsPage() {
 
       // 2. For dummy payment, directly confirm as successful
       // Simulate PayHere webhook notification (signature validation skipped for DUMMY payments)
-      await fetch('http://localhost:5006/api/payments/notify', {
+      await fetch('/api/payments/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

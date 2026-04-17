@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAllReports, uploadReport, deleteReport } from "../../services/patientApi";
 
 const REPORT_TYPES = ["Lab Report", "Imaging", "Diagnostic", "Prescription", "Other"];
 
 function MedicalRecordsPage() {
+  const navigate = useNavigate();
   const [records, setRecords]     = useState([]);
   const [loading, setLoading]     = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -11,6 +13,7 @@ function MedicalRecordsPage() {
   const [success, setSuccess]     = useState("");
   const [error, setError]         = useState("");
   const [showForm, setShowForm]   = useState(false);
+  const [requiresProfile, setRequiresProfile] = useState(false);
   const [form, setForm]           = useState({ title: "", reportType: "Lab Report", description: "" });
   const [file, setFile]           = useState(null);
   const fileRef = useRef();
@@ -22,7 +25,13 @@ function MedicalRecordsPage() {
       setLoading(true);
       const res = await getAllReports();
       setRecords(res.data?.reports || []);
-    } catch { setRecords([]); }
+      setRequiresProfile(false);
+    } catch (err) {
+      setRecords([]);
+      if (err.response?.data?.message?.includes("Create profile first")) {
+        setRequiresProfile(true);
+      }
+    }
     finally { setLoading(false); }
   };
 
@@ -33,6 +42,10 @@ function MedicalRecordsPage() {
   };
 
   const handleFileSelect = e => {
+    if (requiresProfile) {
+      showMsg("err", "Create your patient profile before uploading reports.");
+      return;
+    }
     const f = e.target.files[0];
     if (!f) return;
     setFile(f);
@@ -59,7 +72,15 @@ function MedicalRecordsPage() {
       if (fileRef.current) fileRef.current.value = "";
       await fetch();
     } catch (err) {
-      showMsg("err", err.response?.data?.message || "Upload failed. Make sure you have created your patient profile first.");
+      const message = err.response?.data?.message || "Upload failed.";
+      const profileMissing = message.includes("Create profile first");
+      setRequiresProfile(profileMissing);
+      showMsg(
+        "err",
+        profileMissing
+          ? "Create your patient profile first, then upload reports here."
+          : message
+      );
     } finally { setUploading(false); }
   };
 
@@ -87,7 +108,7 @@ function MedicalRecordsPage() {
           <h1 className="text-2xl font-bold text-slate-800">Medical Records</h1>
           <p className="text-sm text-slate-500">Upload and manage your medical documents</p>
         </div>
-        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+        <button onClick={() => fileRef.current?.click()} disabled={uploading || requiresProfile}
           className="flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-60 transition">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -99,6 +120,23 @@ function MedicalRecordsPage() {
 
       {success && <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">{success}</div>}
       {error   && <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">{error}</div>}
+
+      {requiresProfile && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Create your profile first</p>
+            <p className="text-sm text-amber-700">
+              Medical reports are linked to your patient profile, so profile details need to be saved before uploads can start.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate("/patient/profile")}
+            className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500"
+          >
+            Open Profile
+          </button>
+        </div>
+      )}
 
       {showForm && file && (
         <form onSubmit={handleUpload} className="rounded-2xl border border-teal-200 bg-teal-50 p-5 space-y-4">

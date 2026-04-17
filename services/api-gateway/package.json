@@ -20,11 +20,11 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "http-proxy-middleware": "^2.0.6",
-<<<<<<< HEAD
+
     "jsonwebtoken": "^9.0.2",
-=======
+
     "jsonwebtoken": "^9.0.3",
->>>>>>> 82224fb7ccf1151097c7fc0f548937ff579e98e8
+
     "dotenv": "^16.3.1",
     "cors": "^2.8.5",
     "morgan": "^1.10.0",
