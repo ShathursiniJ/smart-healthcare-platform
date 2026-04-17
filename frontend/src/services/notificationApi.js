@@ -1,6 +1,6 @@
 import apiClient from './apiClient';
 
-const NOTIFICATION_API = 'http://localhost:5007/api';
+const NOTIFICATION_API = '/api';
 
 /**
  * Send appointment booked notification

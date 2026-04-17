@@ -1,9 +1,9 @@
 import axios from "axios";
 import { getToken } from "../features/auth/authStorage";
 
-const DOCTOR_API  = "http://localhost:5005/api";
-const AUTH_API    = "http://localhost:5001/api";
-const PATIENT_API = "http://localhost:5002/api";
+const DOCTOR_API  = "/api";
+const AUTH_API    = "/api";
+const PATIENT_API = "/api";
 
 const getAuthHeader = (extraHeaders = {}) => {
   const token = getToken?.() || localStorage.getItem("token");

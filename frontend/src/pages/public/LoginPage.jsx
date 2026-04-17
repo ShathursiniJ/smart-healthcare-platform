@@ -29,7 +29,7 @@ function LoginPage() {
 
     try {
       const response = await loginUser(formData);
-      const { token, user } = response.data;
+      const { token, user } = response.data?.data ?? response.data;
 
       login({ token, user });
 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const APPT_API = 'http://localhost:5004/api';
+const APPT_API = '/api';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');

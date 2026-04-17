@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const CONSULT_API = 'http://localhost:5003/api';
+const CONSULT_API = '/api';
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('token');

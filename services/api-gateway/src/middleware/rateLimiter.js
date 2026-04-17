@@ -2,6 +2,11 @@ import rateLimit from 'express-rate-limit';
 
 const WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15 minutes
 const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100');
+const IS_DEVELOPMENT = (process.env.NODE_ENV || 'development') === 'development';
+const AUTH_WINDOW_MS = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || String(WINDOW_MS));
+const AUTH_MAX_REQUESTS = parseInt(
+  process.env.AUTH_RATE_LIMIT_MAX || (IS_DEVELOPMENT ? '100' : '5')
+);
 
 /**
  * General rate limiter for all routes
@@ -28,8 +33,8 @@ export const generalLimiter = rateLimit({
  * 5 requests per 15 minutes (prevent brute force)
  */
 export const authLimiter = rateLimit({
-  windowMs: WINDOW_MS,
-  max: 5,
+  windowMs: AUTH_WINDOW_MS,
+  max: AUTH_MAX_REQUESTS,
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful requests
   handler: (req, res) => {

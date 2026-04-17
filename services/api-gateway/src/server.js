@@ -4,8 +4,13 @@ import app from './app.js';
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-const server = app.listen(PORT, () => {
-  console.log(`
+const getPortInUseHelp = (port) => (
+  `Port ${port} is already in use. Run 'netstat -ano | findstr :${port}' to find the PID, then 'taskkill /PID <pid> /F' to stop it, or change PORT in services/api-gateway/.env.`
+);
+
+const startServer = () => {
+  const server = app.listen(PORT, () => {
+    console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║       API Gateway - Smart Healthcare Platform              ║
 ╚════════════════════════════════════════════════════════════╝
@@ -33,7 +38,23 @@ const server = app.listen(PORT, () => {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   `);
-});
+  });
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(getPortInUseHelp(PORT));
+      process.exitCode = 1;
+      return;
+    }
+
+    console.error('API Gateway failed to start:', error);
+    process.exitCode = 1;
+  });
+
+  return server;
+};
+
+const server = startServer();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
