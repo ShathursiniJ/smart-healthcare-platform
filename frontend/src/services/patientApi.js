@@ -1,9 +1,10 @@
 import axios from "axios";
 import { getToken } from "../features/auth/authStorage";
 
-const DOCTOR_API  = "http://localhost:5005/api";
-const AUTH_API    = "http://localhost:5001/api";
-const PATIENT_API = "http://localhost:5002/api";
+const API_BASE = import.meta.env.VITE_APP_API_URL || "http://localhost:3000";
+const DOCTOR_API  = `${API_BASE}/api`;
+const AUTH_API    = `${API_BASE}/api`;
+const PATIENT_API = `${API_BASE}/api`;
 
 const getAuthHeader = (extraHeaders = {}) => {
   const token = getToken?.() || localStorage.getItem("token");

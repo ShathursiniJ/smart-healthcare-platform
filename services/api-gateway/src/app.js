@@ -41,9 +41,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID']
 }));
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing will be added after proxies for local routes if needed
+
 
 // ===== RATE LIMITING =====
 app.use('/api/auth/login', authLimiter);
@@ -106,6 +105,44 @@ app.use(
     pathRewrite: { '^/api': '/api' },
     onError: (err, req, res) => {
       console.error(`[PROXY ERROR] ${req.correlationId} - Auth Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Auth Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+// ===== ADMIN ROUTES PROXY (Doctor Service) =====
+app.use(
+  '/api/admin/doctors',
+  verifyToken,
+  createProxyMiddleware({
+    target: getServiceUrl('doctor'),
+    changeOrigin: true,
+    pathRewrite: { '^/api/admin/doctors': '/api/admin/doctors' },
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Doctor Service (Admin):`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Doctor Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+// ===== ADMIN ROUTES PROXY (Auth Service) =====
+app.use(
+  '/api/admin',
+  verifyToken,
+  createProxyMiddleware({
+    target: getServiceUrl('auth'),
+    changeOrigin: true,
+    pathRewrite: { '^/api/admin': '/api/admin' },
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Auth Service (Admin):`, err.message);
       res.status(503).json({
         success: false,
         message: 'Auth Service unavailable',
@@ -190,6 +227,43 @@ app.use(
   })
 );
 
+// ===== PRESCRIPTION SERVICE PROXY (Protected) =====
+app.use(
+  '/api/prescriptions',
+  verifyToken,
+  createProxyMiddleware({
+    target: getServiceUrl('consultation'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - Prescription (Consultation) Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Consultation Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
+// ===== AI ASSISTANT PROXY =====
+app.use(
+  '/api/ai-assistant',
+  createProxyMiddleware({
+    target: getServiceUrl('consultation'),
+    changeOrigin: true,
+    pathRewrite: { '^/api': '/api' },
+    onError: (err, req, res) => {
+      console.error(`[PROXY ERROR] ${req.correlationId} - AI Assistant (Consultation) Service:`, err.message);
+      res.status(503).json({
+        success: false,
+        message: 'Consultation Service unavailable',
+        code: 'SERVICE_UNAVAILABLE'
+      });
+    }
+  })
+);
+
 // ===== PAYMENT SERVICE PROXY =====
 app.use(
   '/api/payments',
@@ -225,6 +299,11 @@ app.use(
     }
   })
 );
+
+// ===== LOCAL ROUTES BODY PARSING =====
+// Added after proxies to prevent hanging on proxied POST requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ===== 404 AND ERROR HANDLING =====
 app.use(notFoundHandler);

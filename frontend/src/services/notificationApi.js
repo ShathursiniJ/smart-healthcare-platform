@@ -1,6 +1,7 @@
 import apiClient from './apiClient';
 
-const NOTIFICATION_API = 'http://localhost:5007/api';
+const API_BASE = import.meta.env.VITE_APP_API_URL || "http://localhost:3000";
+const NOTIFICATION_API = `${API_BASE}/api`;
 
 /**
  * Send appointment booked notification

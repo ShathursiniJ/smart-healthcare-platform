@@ -30,9 +30,11 @@ services:
     environment:
       PORT: "5001"
       NODE_ENV: development
-      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/auth_db?authSource=admin
+      MONGO_URI: mongodb://admin:admin123@mongodb:27017/auth_db?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
       JWT_EXPIRES_IN: 1d
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -40,7 +42,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5001/api/auth/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5001/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -57,6 +59,8 @@ services:
       MONGODB_URI: mongodb://admin:admin123@mongodb:27017/patient_db?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
       AUTH_SERVICE_URL: http://auth-service:5001
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -66,7 +70,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5002/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5002/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -86,6 +90,8 @@ services:
       DOCTOR_SERVICE_URL: http://doctor-service:5005
       AUTH_SERVICE_URL: http://auth-service:5001
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -93,7 +99,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5003/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5003/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -113,6 +119,8 @@ services:
       PATIENT_SERVICE_URL: http://patient-service:5002
       NOTIFICATION_SERVICE_URL: http://notification-service:5007
       AUTH_SERVICE_URL: http://auth-service:5001
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -120,7 +128,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5004/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5004/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -138,6 +146,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-f8943733a009e790032476b47e8c0c07140edacf682e27aef88eb754cdcc0257}
       AUTH_SERVICE_URL: http://auth-service:5001
       NOTIFICATION_SERVICE_URL: http://notification-service:5007
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -145,7 +155,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5005/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5005/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -171,6 +181,8 @@ services:
       EMAIL_USER: ${EMAIL_USER:-}
       EMAIL_PASS: ${EMAIL_PASS:-}
       EMAIL_FROM_NAME: MediConnect
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -178,7 +190,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5006/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5006/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -205,6 +217,8 @@ services:
       CONSULTATION_SERVICE_URL: http://consultation-service:5003
       PATIENT_SERVICE_URL: http://patient-service:5002
       DOCTOR_SERVICE_URL: http://doctor-service:5005
+    volumes:
+      - ./shared:/shared
     depends_on:
       mongodb:
         condition: service_healthy
@@ -212,7 +226,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:5007/api/notifications/admin || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5007/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -237,6 +251,8 @@ services:
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX_REQUESTS: 100
       CORS_ORIGIN: "*"
+    volumes:
+      - ./shared:/shared
     depends_on:
       - auth-service
       - patient-service
@@ -249,7 +265,7 @@ services:
       - healthcare-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -261,7 +277,7 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     ports:
-      - "5173:5173"
+      - "5173:80"
     environment:
       VITE_APP_API_URL: http://localhost:3000
     depends_on:

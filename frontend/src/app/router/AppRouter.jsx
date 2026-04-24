@@ -72,10 +72,7 @@ function AppRouter() {
           {/* Shared public routes */}
           <Route path="/doctors" element={<DoctorListPage />} />
           <Route path="/doctors/:id" element={<DoctorDetailsPage />} />
-          <Route path="/book-appointment" element={<BookAppointmentPage />} />
-          <Route path="/payment" element={<PaymentsPage />} />
           <Route path="/payment-return" element={<PaymentReturnPage />} />
-          <Route path="/consultation" element={<ConsultationPage />} />
         </Route>
 
         {/* ── Patient ── */}

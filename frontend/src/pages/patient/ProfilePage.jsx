@@ -68,15 +68,22 @@ function ProfilePage() {
         setProfileExists(true);
         setImageError(false);
       } catch (error) {
-        // Profile doesn't exist - enter edit mode to create it
-        setFormData(emptyForm);
-        setOriginalData(emptyForm);
-        setProfileExists(false);
-        setIsEditing(true);
-        setErrorMessage("Create your profile to get started");
-      } finally {
-        setLoading(false);
-      }
+  const status = error?.response?.status;
+
+  if (status === 404) {
+    setFormData(emptyForm);
+    setOriginalData(emptyForm);
+    setProfileExists(false);
+    setIsEditing(true);
+    setErrorMessage("Create your profile to get started");
+  } else {
+    setErrorMessage(
+      error?.response?.data?.message || "Failed to load profile. Please try again."
+    );
+  }
+} finally {
+  setLoading(false);
+}
     };
 
     loadProfile();
