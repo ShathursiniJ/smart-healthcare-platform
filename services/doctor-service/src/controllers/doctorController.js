@@ -1,16 +1,76 @@
 import Doctor from '../models/doctorModel.js';
 
+const normalizeDoctorPayload = (body) => ({
+  name: body.name?.trim(),
+  email: body.email?.trim().toLowerCase(),
+  phone: body.phone?.trim(),
+  specialization: body.specialization,
+  licenseNumber: body.licenseNumber?.trim().toUpperCase(),
+  hospital: body.hospital?.trim(),
+  qualifications: Array.isArray(body.qualifications)
+    ? body.qualifications.map((q) => q?.trim()).filter(Boolean)
+    : [],
+  experience: body.experience,
+  consultationFee: body.consultationFee,
+  bio: body.bio?.trim(),
+});
+
+const duplicateFieldMessages = {
+  email: 'This email is already linked to another doctor profile.',
+  licenseNumber: 'This license number is already registered. Please use the correct SLMC number or contact admin.',
+  authUserId: 'A doctor profile already exists for this account.',
+};
+
+const handleDoctorWriteError = (res, error) => {
+  if (error?.code === 11000) {
+    const duplicateField = Object.keys(error.keyPattern || {})[0] || Object.keys(error.keyValue || {})[0];
+    return res.status(409).json({
+      success: false,
+      message: duplicateFieldMessages[duplicateField] || 'A doctor profile with these details already exists.',
+      field: duplicateField,
+    });
+  }
+
+  return res.status(500).json({ success: false, message: error.message });
+};
+
 // POST /api/doctors/profile/create
 export const createDoctorProfile = async (req, res) => {
   try {
     const existing = await Doctor.findOne({ authUserId: req.user.userId });
     if (existing) {
-      return res.status(400).json({ success: false, message: 'Doctor profile already exists' });
+      return res.status(409).json({ success: false, message: 'Doctor profile already exists' });
     }
+
     const {
       name, email, phone, specialization, licenseNumber,
       hospital, qualifications, experience, consultationFee, bio
-    } = req.body;
+    } = normalizeDoctorPayload(req.body);
+
+    const duplicateDoctor = await Doctor.findOne({
+      $or: [
+        { email },
+        { licenseNumber },
+      ],
+    }).select('email licenseNumber');
+
+    if (duplicateDoctor) {
+      if (duplicateDoctor.licenseNumber === licenseNumber) {
+        return res.status(409).json({
+          success: false,
+          message: duplicateFieldMessages.licenseNumber,
+          field: 'licenseNumber',
+        });
+      }
+
+      if (duplicateDoctor.email === email) {
+        return res.status(409).json({
+          success: false,
+          message: duplicateFieldMessages.email,
+          field: 'email',
+        });
+      }
+    }
 
     const doctor = await Doctor.create({
       authUserId: req.user.userId,
@@ -24,7 +84,7 @@ export const createDoctorProfile = async (req, res) => {
       data: { doctor }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -65,7 +125,7 @@ export const updateDoctorProfile = async (req, res) => {
 
     res.status(200).json({ success: true, message: 'Profile updated', data: { doctor } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -104,7 +164,7 @@ export const setAvailability = async (req, res) => {
       data: { availability: doctor.availability }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -126,7 +186,7 @@ export const getAllApprovedDoctors = async (req, res) => {
       data: { count: doctors.length, doctors }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -140,7 +200,7 @@ export const getDoctorById = async (req, res) => {
     }
     res.status(200).json({ success: true, message: 'Doctor fetched', data: { doctor } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -154,7 +214,7 @@ export const getDoctorAvailability = async (req, res) => {
     }
     res.status(200).json({ success: true, message: 'Availability fetched', data: { doctor } });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };
 
@@ -183,6 +243,6 @@ export const uploadProfileImage = async (req, res) => {
       data: { imageUrl, doctor }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    handleDoctorWriteError(res, error);
   }
 };

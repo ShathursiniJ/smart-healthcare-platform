@@ -29,7 +29,14 @@ function LoginPage() {
 
     try {
       const response = await loginUser(formData);
+
+      // response is already response.data from axios (see authApi.js)
+      // Backend shape: { success, message, data: { token, user } }
       const { token, user } = response.data;
+
+      if (!token || !user) {
+        throw new Error("Invalid response from server. Please try again.");
+      }
 
       login({ token, user });
 
@@ -39,9 +46,16 @@ function LoginPage() {
         navigate("/doctor/dashboard");
       } else if (user.role === "admin") {
         navigate("/admin/dashboard");
+      } else {
+        // Unknown role — clear auth data and show error
+        setErrorMessage(`Unrecognised role "${user.role}". Please contact support.`);
       }
     } catch (error) {
-      setErrorMessage(error?.response?.data?.message || "Login failed");
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Login failed. Please check your credentials and try again.";
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
@@ -63,6 +77,7 @@ function LoginPage() {
             value={formData.email}
             onChange={handleChange}
             placeholder="Enter your email"
+            required
             className="w-full rounded-xl border border-slate-200 px-3 py-3 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"
           />
         </div>
@@ -77,12 +92,15 @@ function LoginPage() {
             value={formData.password}
             onChange={handleChange}
             placeholder="Enter your password"
+            required
             className="w-full rounded-xl border border-slate-200 px-3 py-3 outline-none transition focus:border-cyan-600 focus:ring-2 focus:ring-cyan-100"
           />
         </div>
 
         {errorMessage && (
-          <div className="text-sm text-red-500">{errorMessage}</div>
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            {errorMessage}
+          </div>
         )}
 
         <button
