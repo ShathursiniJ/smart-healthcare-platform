@@ -27,42 +27,35 @@ const createUserAccount = async ({ name, email, password, role, phone }) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const isDev = process.env.NODE_ENV === "development" || true; // Set to true for current task
-
   const user = await User.create({
     name,
     email,
     passwordHash,
     role,
     phone: phone || '',
-    isEmailVerified: isDev,
-    accountStatus: isDev ? "active" : "pending_verification",
+    isEmailVerified: false,
+    accountStatus: "pending_verification",
   });
 
-  if (isDev) {
-    console.log(`Auto-verified user: ${email}`);
-    return user;
-  }
-
   const otp = generateOtp();
-const otpHash = hashToken(otp);
+  const otpHash = hashToken(otp);
 
-await EmailVerificationOtp.deleteMany({ userId: user._id });
+  await EmailVerificationOtp.deleteMany({ userId: user._id });
 
-await EmailVerificationOtp.create({
-  userId: user._id,
-  otpHash,
-  expiresAt: new Date(Date.now() + VERIFICATION_OTP_EXPIRY_MS),
-  attempts: 0,
-});
+  await EmailVerificationOtp.create({
+    userId: user._id,
+    otpHash,
+    expiresAt: new Date(Date.now() + VERIFICATION_OTP_EXPIRY_MS),
+    attempts: 0,
+  });
 
-await sendVerificationOtpEmail(user.email, otp);
+  await sendVerificationOtpEmail(user.email, otp);
 
-if (user.phone) {
-  const smsBody = `Welcome to MediConnect, ${name}! Your OTP for email verification is ${otp}.`;
-  sendSMS(user.phone, smsBody).catch(err => console.error(err));
-  sendWhatsApp(user.phone, smsBody).catch(err => console.error(err));
-}
+  if (user.phone) {
+    const smsBody = `Welcome to MediConnect, ${name}! Your OTP for email verification is ${otp}.`;
+    sendSMS(user.phone, smsBody).catch(err => console.error(err));
+    sendWhatsApp(user.phone, smsBody).catch(err => console.error(err));
+  }
 
   return user;
 };
