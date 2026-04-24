@@ -1,7 +1,8 @@
 import axios from "axios";
 
-const DOCTOR_API = "http://localhost:5005/api";
-const AUTH_API = "http://localhost:5001/api";
+const API_BASE = import.meta.env.VITE_APP_API_URL || "http://localhost:3000";
+const DOCTOR_API = `${API_BASE}/api`;
+const AUTH_API = `${API_BASE}/api`;
 
 const getAuthHeader = () => {
   const token = localStorage.getItem("token");

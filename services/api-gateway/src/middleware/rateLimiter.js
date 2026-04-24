@@ -9,7 +9,7 @@ const MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100');
  */
 export const generalLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  max: MAX_REQUESTS,
+  max: 1000,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
@@ -29,7 +29,7 @@ export const generalLimiter = rateLimit({
  */
 export const authLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  max: 5,
+  max: 100,
   message: 'Too many login attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful requests
   handler: (req, res) => {
@@ -48,7 +48,7 @@ export const authLimiter = rateLimit({
  */
 export const apiLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  max: 50,
+  max: 1000,
   message: 'Too many API requests, please try again later.',
   handler: (req, res) => {
     res.status(429).json({

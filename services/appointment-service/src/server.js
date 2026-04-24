@@ -10,3 +10,5 @@ const PORT = process.env.PORT || 5004;
 app.listen(PORT, () => {
   console.log(`Appointment service running on port ${PORT}`);
 });
+
+// nodemon trigger

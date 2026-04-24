@@ -1,6 +1,17 @@
+const normalizeUser = (user) => {
+  if (!user) return null;
+
+  return {
+    ...user,
+    id: user.id || user._id || "",
+    _id: user._id || user.id || "",
+  };
+};
+
 export const saveAuthData = ({ token, user }) => {
+  const normalizedUser = normalizeUser(user);
   localStorage.setItem("token", token);
-  localStorage.setItem("user", JSON.stringify(user));
+  localStorage.setItem("user", JSON.stringify(normalizedUser));
 };
 
 export const getToken = () => {
@@ -8,8 +19,15 @@ export const getToken = () => {
 };
 
 export const getStoredUser = () => {
-  const user = localStorage.getItem("user");
-  return user ? JSON.parse(user) : null;
+  const raw = localStorage.getItem("user");
+  if (!raw) return null;
+
+  try {
+    return normalizeUser(JSON.parse(raw));
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
 };
 
 export const clearAuthData = () => {
